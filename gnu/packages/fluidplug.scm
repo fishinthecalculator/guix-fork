@@ -1,0 +1,319 @@
+;;; GNU Guix --- Functional package management for GNU
+;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
+;;;
+;;; This file is part of GNU Guix.
+;;;
+;;; GNU Guix is free software; you can redistribute it and/or modify it
+;;; under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation; either version 3 of the License, or (at
+;;; your option) any later version.
+;;;
+;;; GNU Guix is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (gnu packages fluidplug)
+  #:use-module (guix build-system gnu)
+  #:use-module (guix download)
+  #:use-module (guix gexp)
+  #:use-module (guix git-download)
+  #:use-module ((guix licenses)
+                #:prefix license:)
+  #:use-module (guix packages)
+  #:use-module (guix records)
+  #:use-module (guix utils)
+  #:use-module (gnu packages audio)
+  #:use-module (gnu packages base)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages pkg-config)
+  #:use-module (srfi srfi-1)
+  #:export (fluidplug-plugin
+            fluidplug-plugin?
+            fluidplug-plugin-name
+            fluidplug-plugin-path
+            fluidplug-plugin-hash
+            fluidplug-plugin-license))
+
+(define-record-type* <fluidplug-plugin>
+  fluidplug-plugin make-fluidplug-plugin
+  fluidplug-plugin?
+  (name            fluidplug-plugin-name)         ;string
+  (hash            fluidplug-plugin-hash)         ;string
+  (path            fluidplug-plugin-path)         ;string
+  (license         fluidplug-plugin-license       ;license
+                   (default license:cc-by-sa4.0)))
+
+(define (fluidplug-plugin->package-name record)
+  (string-append "fluidplug-"
+                 (string-downcase
+                  (string-replace-substring
+                   (fluidplug-plugin-name record) "_" "-"))
+                 "-lv2"))
+
+(define (fluidplug-plugin->origin record)
+  (origin
+    (method url-fetch)
+    (uri
+     (string-append "https://download.linuxaudio.org/"
+                    "musical-instrument-libraries/sf2/"
+                    (fluidplug-plugin-path record)))
+    (sha256
+     (base32 (fluidplug-plugin-hash record)))))
+
+(define (fluidplug-plugin->local-path record)
+  (string-append "./" (fluidplug-plugin-name record) ".lv2/"
+                 (basename (fluidplug-plugin-path record))))
+
+(define airfont320-fluidplug-plugin
+  (fluidplug-plugin
+   (name "AirFont320")
+   (path "airfont_a340u.tar.7z")
+   (hash "1x4xzm4khq823i4p18ydbkjza2nv3hzwyxp7vf3gzqs374jdcqbw")
+   (license license:gpl2)))
+
+(define avl-drumkits-perc-fluidplug-plugin
+  (fluidplug-plugin
+   (name "AVL_Drumkits_Perc")
+   (path "AVL-Drumkits-1.1-SF2-splitted/AVL_Drumkits_Perc_1.1.tar.7z")
+   (hash "0l1zvzw9dg922wf9llcl9zlw5ybjmayg7yqacp253xcr2jz1hn7m")
+   (license license:cc-by-sa3.0)))
+
+(define black-pearl-4a-fluidplug-plugin
+  (fluidplug-plugin
+   (name "Black_Pearl_4A")
+   (path "AVL-Drumkits-1.1-SF2-splitted/Black_Pearl_4A-1.1.tar.7z")
+   (hash "0flzlg5m2r3df8dchydzg3xllcv7ignr7hx6qxzy51s6gzrlbzli")
+   (license license:cc-by-sa3.0)))
+
+(define black-pearl-4b-fluidplug-plugin
+  (fluidplug-plugin
+   (name "Black_Pearl_4B")
+   (path "AVL-Drumkits-1.1-SF2-splitted/Black_Pearl_4B-1.1.tar.7z")
+   (hash "1z5q8z4k81xnbcv0gpc2xgrzqm9fg4n2yly1kaw82q7sm29vi0z9")
+   (license license:cc-by-sa3.0)))
+
+(define black-pearl-5-fluidplug-plugin
+  (fluidplug-plugin
+   (name "Black_Pearl_5")
+   (path "AVL-Drumkits-1.1-SF2-splitted/Black_Pearl_5-1.1.tar.7z")
+   (hash "0mg41wc912sfj2mydn86ychwk21l3ngbn7k3qsm6jgf1ipmsip9y")
+   (license license:cc-by-sa3.0)))
+
+(define red-zeppelin-4-fluidplug-plugin
+  (fluidplug-plugin
+   (name "Red_Zeppelin_4")
+   (path "AVL-Drumkits-1.1-SF2-splitted/Red_Zeppelin_4-1.1.tar.7z")
+   (hash "0pcswg4hlyn8j6nghbwvxa71ibp6r0wxcbxjzxs4iim43vpxc659")
+   (license license:cc-by-sa3.0)))
+
+(define red-zeppelin-5-fluidplug-plugin
+  (fluidplug-plugin
+   (name "Red_Zeppelin_5")
+   (path "AVL-Drumkits-1.1-SF2-splitted/Red_Zeppelin_5-1.1.tar.7z")
+   (hash "18hhmi1d1i7gr2rp4wn28pnfwl825rmhmjnvxvvcwdmis6nad4gm")
+   (license license:cc-by-sa3.0)))
+
+(define fluidgm-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidGM")
+   (path "fluidr3.tar.7z")
+   (hash "00ka1b2pxn0g2g0hm7kdg5w785pfx8f9585238d183wjdkc3a8m6")
+   (license license:expat)))
+
+(define fluidbass-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidBass")
+   (path "fluidr3-splitted/fluidr3gm_bass.sf2.tar.7z")
+   (hash "1zhixrxkwvmn6xkpy9f8zkrwxmaqwdcx0jz7zg8lc2amqkx9wqan")))
+
+(define fluidbrass-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidBrass")
+   (path "fluidr3-splitted/fluidr3gm_brass.sf2.tar.7z")
+   (hash "027l3q4q9011xzbzsrsp5nj3h05w9dj7d8b943xzck7q4sp9alkp")))
+
+(define fluidchromperc-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidChromPerc")
+   (path "fluidr3-splitted/fluidr3gm_chromaticpercussion.sf2.tar.7z")
+   (hash "1233fh36wlifrawh57v8vycxc0g4pbvy3qr9f596g9n7mm4h51f7")))
+
+(define fluiddrums-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidDrums")
+   (path "fluidr3-splitted/fluidr3gm_drums.sf2.tar.7z")
+   (hash "01pv3aj52pz8xy29acprwkb69jxhrn64kx7w29ch5bl091lccqgr")))
+
+(define fluidensemble-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidEnsemble")
+   (path "fluidr3-splitted/fluidr3gm_ensemble.sf2.tar.7z")
+   (hash "0rswcgzapcjmwddh2hgicym27hqz3p43r2s8j7hy1s40hzk3nbax")))
+
+(define fluidethnic-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidEthnic")
+   (path "fluidr3-splitted/fluidr3gm_ethnic.sf2.tar.7z")
+   (hash "0z1z37wn6lw1n919bkpfirachg5wwddi7f0g4l9vimazv34ds1b1")))
+
+(define fluidguitars-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidGuitars")
+   (path "fluidr3-splitted/fluidr3gm_guitar.sf2.tar.7z")
+   (hash "1d5jxx4sgbyh9sqmfksggcsri9hal7mw83a6h1vqb9xf59gnmx1i")))
+
+(define fluidorgans-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidOrgans")
+   (path "fluidr3-splitted/fluidr3gm_organ.sf2.tar.7z")
+   (hash "12zlq28cmr2hsgn1319hidzcm8yifx6vsqsqk544z3qkhc8cg4fr")))
+
+(define fluidpercussion-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidPercussion")
+   (path "fluidr3-splitted/fluidr3gm_percussive.sf2.tar.7z")
+   (hash "1gql0g1zk09n6r90mav47khdc406jhmg5iql6i2zjmg9l7yg65n3")))
+
+(define fluidpianos-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidPianos")
+   (path "fluidr3-splitted/fluidr3gm_piano.sf2.tar.7z")
+   (hash "06a817xvx7qj8plr1vhpanbdr97cbmzky0pp6xhff916s5k0jg2r")))
+
+(define fluidpipes-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidPipes")
+   (path "fluidr3-splitted/fluidr3gm_pipe.sf2.tar.7z")
+   (hash "09wzvsabcif27687g71g4m75zz08zpwpm2dzwh8a7xsfi5qdynf2")))
+
+(define fluidreeds-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidReeds")
+   (path "fluidr3-splitted/fluidr3gm_reed.sf2.tar.7z")
+   (hash "1yb0whi67wz7ag6hcfdns69m1ic3fq6firvbb893ilnx8h17yjak")))
+
+(define fluidsoundfx-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidSoundFX")
+   (path "fluidr3-splitted/fluidr3gm_soundeffects.sf2.tar.7z")
+   (hash "0sg8gca9735gy0pna63vgsfnabk54dl30n1lnhcf976n7y0npzfx")))
+
+(define fluidstrings-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidStrings")
+   (path "fluidr3-splitted/fluidr3gm_strings.sf2.tar.7z")
+   (hash "1nnxr62i3p3hhdpwlly62c4cvf7f3dzq818fmlnlxp25215h17bs")))
+
+(define fluidsynthfx-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidSynthFX")
+   (path "fluidr3-splitted/fluidr3gm_syntheffects.sf2.tar.7z")
+   (hash "0rlq58v9m6wjk45kxmza54y8fkj1b8y1zg00r80nwyqz6rylgjh4")))
+
+(define fluidsynthleads-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidSynthLeads")
+   (path "fluidr3-splitted/fluidr3gm_synthlead.sf2.tar.7z")
+   (hash "0axi5dyqf8zh1gn82qq0jpzr0cgbsjn4xm0yrlqld4k6h9ggj475")))
+
+(define fluidsynthpads-fluidplug-plugin
+  (fluidplug-plugin
+   (name "FluidSynthPads")
+   (path "fluidr3-splitted/fluidr3gm_synthpad.sf2.tar.7z")
+   (hash "1q4pd6ymb08yc6rz68wlidjp5kp7pygc2aw45djw9wr8id6pnadi")))
+
+(define-public fluidplug-plugins
+  (list airfont320-fluidplug-plugin
+        avl-drumkits-perc-fluidplug-plugin
+        black-pearl-4a-fluidplug-plugin
+        black-pearl-4b-fluidplug-plugin
+        black-pearl-5-fluidplug-plugin
+        red-zeppelin-4-fluidplug-plugin
+        red-zeppelin-5-fluidplug-plugin
+        fluidgm-fluidplug-plugin
+        fluidbass-fluidplug-plugin
+        fluidbrass-fluidplug-plugin
+        fluidchromperc-fluidplug-plugin
+        fluiddrums-fluidplug-plugin
+        fluidensemble-fluidplug-plugin
+        fluidethnic-fluidplug-plugin
+        fluidguitars-fluidplug-plugin
+        fluidorgans-fluidplug-plugin
+        fluidpercussion-fluidplug-plugin
+        fluidpianos-fluidplug-plugin
+        fluidpipes-fluidplug-plugin
+        fluidreeds-fluidplug-plugin
+        fluidsoundfx-fluidplug-plugin
+        fluidstrings-fluidplug-plugin
+        fluidsynthfx-fluidplug-plugin
+        fluidsynthleads-fluidplug-plugin
+        fluidsynthpads-fluidplug-plugin))
+
+(define-public fluidplug-lv2
+  (let ((version "0.0.5")
+        (revision "0")
+        (commit "38d7d0d5259c89199be3cf56768edf0d41bfd881"))
+    (package
+      (name "fluidplug-lv2")
+      (version (git-version version revision commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url "https://github.com/falkTX/FluidPlug")
+                      (commit commit)))
+                (file-name (git-file-name name version))
+                (sha256
+                 (base32
+                  "0k4wjcvpgf4nk4d5b40x5zckfgp22b4i3npcahqbr16hh21cjfjj"))
+                (modules '((guix build utils)))
+                (snippet '(begin
+                            ;; SoundFonts can't be downloaded at build time
+                            ;; in Guix, so it is disabled.
+                            (substitute* "Makefile"
+                              (("wget") "# wget"))
+                            #t))))
+      (build-system gnu-build-system)
+      (arguments
+       (list
+        ;; There are no tests.
+        #:tests? #f
+        #:make-flags #~(list (string-append "DESTDIR=" #$output)
+                             "PREFIX=")
+        #:phases
+        #~(modify-phases %standard-phases
+            (add-after 'unpack 'unpack-plugin
+              (lambda _
+                (use-modules (srfi srfi-1))
+                (for-each
+                 (lambda (p)
+                   (define source (first p))
+                   (define target (second p))
+                   (symlink source target))
+                 '(#$@(map
+                       (lambda (p)
+                         (list (fluidplug-plugin->origin p)
+                               (fluidplug-plugin->local-path p)))
+                       fluidplug-plugins)))))
+            (delete 'configure)
+            (add-before 'build 'setenv
+              (lambda _
+                (setenv "CC" "gcc"))))))
+      (native-inputs
+       (list lv2 gnu-make p7zip pkg-config))
+      (inputs (list fluidsynth))
+      (native-search-paths
+       (list (search-path-specification
+              (variable "LV2_PATH")
+              (files '("lib/lv2")))))
+      (synopsis
+       "SoundFonts as LV2 plugins via FluidSynth")
+      (description
+       "@code{FluidPlug} provides SoundFonts as LV2 plugins via FluidSynth.")
+      (home-page "https://github.com/falkTX/FluidPlug")
+      (license
+       (delete-duplicates
+        (map fluidplug-plugin-license fluidplug-plugins))))))
