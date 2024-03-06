@@ -578,6 +578,12 @@ GLib/GIO, GTK, GStreamer and Webkit."
                       "guix/build/zig-build-system.scm"
                       "guix/build-system/zig.scm")))
 
+(define-team fluidplug
+  (team 'fluidplug
+        #:name "FluidPlug"
+        #:description "FluidPlug LV2 plugins"
+        #:scope (list "gnu/packages/fluidplug.scm")))
+
 
 (define-member (person "Eric Bavier"
                        "bavier@posteo.net")
@@ -747,6 +753,10 @@ GLib/GIO, GTK, GStreamer and Webkit."
 (define-member (person "André Batista"
                        "nandre@riseup.net")
   mozilla)
+
+(define-member (person "Giacomo Leidi"
+                       "goodoldpaul@autistici.org")
+  fluidplug)
 
 
 (define (find-team name)
