@@ -317,3 +317,129 @@
       (license
        (delete-duplicates
         (map fluidplug-plugin-license fluidplug-plugins))))))
+
+(define (fluidplug-plugin->package record)
+  (package
+    (inherit fluidplug-lv2)
+    (name (fluidplug-plugin->package-name record))
+    (arguments
+     (substitute-keyword-arguments (package-arguments fluidplug-lv2)
+       ((#:make-flags make-flags)
+        #~(list (string-append "DESTDIR=" #$output)
+                "PREFIX="))
+       ((#:phases phases)
+        #~(modify-phases #$phases
+            (replace 'unpack-plugin
+              (lambda _
+                (symlink #$(fluidplug-plugin->origin record)
+                         #$(fluidplug-plugin->local-path record))))
+            (replace 'build
+              (lambda* (#:key make-flags #:allow-other-keys)
+                (apply invoke `("make" ,@make-flags
+                                #$(fluidplug-plugin-name record)))))
+            (replace 'install
+              (lambda _
+                (let* ((plugin-directory
+                        (string-append #$(fluidplug-plugin-name record)
+                                       ".lv2"))
+                       (lib (string-append #$output "/lib/lv2"))
+                       (share/doc (string-append #$output "/share/doc"))
+                       (plugin-lib (string-append lib "/" plugin-directory)))
+
+                  ;; Install plugin
+                  (for-each
+                   (lambda (f)
+                     (install-file f plugin-lib))
+                   (find-files plugin-directory
+                               "^.*\\.(sf2|so|ttl)$"))
+
+                  ;; Install license
+                  (for-each
+                   (lambda (f)
+                     (install-file f share/doc))
+                   (find-files plugin-directory "(README|License\\.pdf)"))
+
+                  ;; Install UI
+                  (copy-recursively (string-append plugin-directory "/modgui")
+                                    (string-append plugin-lib "/modgui")))))))))
+    (description
+     (string-append (package-description fluidplug-lv2) "
+
+This package provides the @code{" (fluidplug-plugin-name record)
+"} LV2 plugin."))
+    (license (fluidplug-plugin-license record))))
+
+(define-public fluidplug-airfont320-lv2
+  (fluidplug-plugin->package airfont320-fluidplug-plugin))
+
+(define-public fluidplug-avl-drumkits-perc-lv2
+  (fluidplug-plugin->package avl-drumkits-perc-fluidplug-plugin))
+
+(define-public fluidplug-black-pearl-4a-lv2
+  (fluidplug-plugin->package black-pearl-4a-fluidplug-plugin))
+
+(define-public fluidplug-black-pearl-4b-lv2
+  (fluidplug-plugin->package black-pearl-4b-fluidplug-plugin))
+
+(define-public fluidplug-black-pearl-5-lv2
+  (fluidplug-plugin->package black-pearl-5-fluidplug-plugin))
+
+(define-public fluidplug-red-zeppelin-4-lv2
+  (fluidplug-plugin->package red-zeppelin-4-fluidplug-plugin))
+
+(define-public fluidplug-red-zeppelin-5-lv2
+  (fluidplug-plugin->package red-zeppelin-5-fluidplug-plugin))
+
+(define-public fluidplug-fluidgm-lv2
+  (fluidplug-plugin->package fluidgm-fluidplug-plugin))
+
+(define-public fluidplug-fluidbass-lv2
+  (fluidplug-plugin->package fluidbass-fluidplug-plugin))
+
+(define-public fluidplug-fluidbrass-lv2
+  (fluidplug-plugin->package fluidbrass-fluidplug-plugin))
+
+(define-public fluidplug-fluidchromperc-lv2
+  (fluidplug-plugin->package fluidchromperc-fluidplug-plugin))
+
+(define-public fluidplug-fluiddrums-lv2
+  (fluidplug-plugin->package fluiddrums-fluidplug-plugin))
+
+(define-public fluidplug-fluidensemble-lv2
+  (fluidplug-plugin->package fluidensemble-fluidplug-plugin))
+
+(define-public fluidplug-fluidethnic-lv2
+  (fluidplug-plugin->package fluidethnic-fluidplug-plugin))
+
+(define-public fluidplug-fluidguitars-lv2
+  (fluidplug-plugin->package fluidguitars-fluidplug-plugin))
+
+(define-public fluidplug-fluidorgans-lv2
+  (fluidplug-plugin->package fluidorgans-fluidplug-plugin))
+
+(define-public fluidplug-fluidpercussion-lv2
+  (fluidplug-plugin->package fluidpercussion-fluidplug-plugin))
+
+(define-public fluidplug-fluidpianos-lv2
+  (fluidplug-plugin->package fluidpianos-fluidplug-plugin))
+
+(define-public fluidplug-fluidpipes-lv2
+  (fluidplug-plugin->package fluidpipes-fluidplug-plugin))
+
+(define-public fluidplug-fluidreeds-lv2
+  (fluidplug-plugin->package fluidreeds-fluidplug-plugin))
+
+(define-public fluidplug-fluidsoundfx-lv2
+  (fluidplug-plugin->package fluidsoundfx-fluidplug-plugin))
+
+(define-public fluidplug-fluidstrings-lv2
+  (fluidplug-plugin->package fluidstrings-fluidplug-plugin))
+
+(define-public fluidplug-fluidsynthfx-lv2
+  (fluidplug-plugin->package fluidsynthfx-fluidplug-plugin))
+
+(define-public fluidplug-fluidsynthleads-lv2
+  (fluidplug-plugin->package fluidsynthleads-fluidplug-plugin))
+
+(define-public fluidplug-fluidsynthpads-lv2
+  (fluidplug-plugin->package fluidsynthpads-fluidplug-plugin))
