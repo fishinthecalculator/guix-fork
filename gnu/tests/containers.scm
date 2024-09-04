@@ -27,6 +27,9 @@
   #:use-module (gnu services)
   #:use-module (gnu services containers)
   #:use-module (gnu services desktop)
+  #:use-module ((gnu services docker)
+                #:select (containerd-service-type
+                          docker-service-type))
   #:use-module (gnu services dbus)
   #:use-module (gnu services networking)
   #:use-module (gnu system)
@@ -39,7 +42,8 @@
   #:use-module (guix profiles)
   #:use-module ((guix scripts pack) #:prefix pack:)
   #:use-module (guix store)
-  #:export (%test-rootless-podman))
+  #:export (%test-rootless-podman
+            %test-oci-service-docker))
 
 
 (define %rootless-podman-os
@@ -345,3 +349,344 @@ standard output device and then enters a new line.")
    (name "rootless-podman")
    (description "Test rootless Podman service.")
    (value (build-tarball&run-rootless-podman-test))))
+
+
+(define %guile-oci-image
+  (oci-image
+   (repository "guile")
+   (value
+    (specifications->manifest '("guile")))
+   (pack-options
+    '(#:symlinks (("/bin" -> "bin"))))))
+
+(define %oci-test-containers
+  (list
+   (oci-container-configuration
+    (provision "first")
+    (image %guile-oci-image)
+    (entrypoint "/bin/guile")
+    (network "my-network")
+    (command
+     '("-c" "(use-modules (web server))
+(define (handler request request-body)
+  (values '((content-type . (text/plain))) \"out of office\"))
+(run-server handler 'http `(#:addr ,(inet-pton AF_INET \"0.0.0.0\")))"))
+    (host-environment
+     '(("VARIABLE" . "value")))
+    (volumes
+     '(("my-volume" . "/my-volume")))
+    (extra-arguments
+     '("--env" "VARIABLE")))
+   (oci-container-configuration
+    (provision "second")
+    (image %guile-oci-image)
+    (entrypoint "/bin/guile")
+    (network "my-network")
+    (command
+     '("-c" "(let l ((c 300))(display c)(sleep 1)(when(positive? c)(l (- c 1))))"))
+    (volumes
+     '(("my-volume" . "/my-volume")
+       ("/shared.txt" . "/shared.txt:ro"))))))
+
+(define %oci-extension-test
+  (oci-extension
+   (networks
+    (list (oci-network-configuration (name "my-network"))))
+   (volumes
+    (list (oci-volume-configuration (name "my-volume"))))
+   (containers %oci-test-containers)))
+
+(define %oci-docker-os
+  (simple-operating-system
+   (service dhcp-client-service-type)
+   (service dbus-root-service-type)
+   (service polkit-service-type)
+   (service elogind-service-type)
+   (service containerd-service-type)
+   (service docker-service-type)
+   (extra-special-file "/shared.txt"
+                       (plain-file "shared.txt" "hello"))
+   (service oci-service-type
+            (oci-configuration
+             (verbose? #t)))
+   (simple-service 'oci-provisioning
+                   oci-service-type
+                   %oci-extension-test)))
+
+(define (run-docker-oci-service-test)
+  (define os
+    (marionette-operating-system
+     (operating-system-with-gc-roots
+      %oci-docker-os
+      (list))
+     #:imported-modules '((gnu services herd)
+                          (guix combinators))))
+
+  (define vm
+    (virtual-machine
+     (operating-system os)
+     (volatile? #f)
+     (memory-size 1024)
+     (disk-image-size (* 3000 (expt 2 20)))
+     (port-forwardings '())))
+
+  (define test
+    (with-imported-modules '((gnu build marionette))
+      #~(begin
+          (use-modules (srfi srfi-11) (srfi srfi-64)
+                       (gnu build marionette))
+
+          (define marionette
+            ;; Relax timeout to accommodate older systems and
+            ;; allow for pulling the image.
+            (make-marionette (list #$vm) #:timeout 60))
+
+          (test-runner-current (system-test-runner #$output))
+          (test-begin "docker-oci-service")
+
+          (marionette-eval
+           '(begin
+              (use-modules (gnu services herd))
+              (wait-for-service 'dockerd))
+           marionette)
+
+          (test-assert "docker-volumes running"
+            (begin
+              (define (run-test)
+                (marionette-eval
+                 `(begin
+                    (use-modules (ice-9 popen)
+                                 (ice-9 rdelim))
+
+                    (define (read-lines file-or-port)
+                      (define (loop-lines port)
+                        (let loop ((lines '()))
+                          (match (read-line port)
+                            ((? eof-object?)
+                             (reverse lines))
+                            (line
+                             (loop (cons line lines))))))
+
+                      (if (port? file-or-port)
+                          (loop-lines file-or-port)
+                          (call-with-input-file file-or-port
+                            loop-lines)))
+
+                    (define slurp
+                      (lambda args
+                        (let* ((port (apply open-pipe* OPEN_READ
+                                            (list "sh" "-l" "-c"
+                                                  (string-join
+                                                   args
+                                                   " "))))
+                               (output (read-lines port))
+                               (status (close-pipe port)))
+                          output)))
+
+                    (stable-sort
+                     (slurp
+                      "/run/current-system/profile/bin/docker"
+                      "volume" "ls" "--format" "\"{{.Name}}\"")
+                     string<=?))
+
+                 marionette))
+              ;; Allow services to come up on slower machines
+              (let loop ((attempts 0))
+                (if (= attempts 80)
+                    (error "Service didn't come up after more than 80 seconds")
+                    (if (equal? '("my-volume")
+                                (run-test))
+                        #t
+                        (begin
+                          (sleep 1)
+                          (loop (+ 1 attempts))))))))
+
+          (test-assert "docker-networks running"
+            (begin
+              (define (run-test)
+                (marionette-eval
+                 `(begin
+                    (use-modules (ice-9 popen)
+                                 (ice-9 rdelim))
+
+                    (define (read-lines file-or-port)
+                      (define (loop-lines port)
+                        (let loop ((lines '()))
+                          (match (read-line port)
+                            ((? eof-object?)
+                             (reverse lines))
+                            (line
+                             (loop (cons line lines))))))
+
+                      (if (port? file-or-port)
+                          (loop-lines file-or-port)
+                          (call-with-input-file file-or-port
+                            loop-lines)))
+
+                    (define slurp
+                      (lambda args
+                        (let* ((port (apply open-pipe* OPEN_READ
+                                            (list "sh" "-l" "-c"
+                                                  (string-join
+                                                   args
+                                                   " "))))
+                               (output (read-lines port))
+                               (status (close-pipe port)))
+                          output)))
+
+                    (stable-sort
+                     (slurp
+                      "/run/current-system/profile/bin/docker"
+                      "network" "ls" "--format" "\"{{.Name}}\"")
+                     string<=?))
+
+                 marionette))
+              ;; Allow services to come up on slower machines
+              (let loop ((attempts 0))
+                (if (= attempts 80)
+                    (error "Service didn't come up after more than 80 seconds")
+                    (if (equal? '("bridge" "host" "my-network" "none")
+                                (run-test))
+                        #t
+                        (begin
+                          (sleep 1)
+                          (loop (+ 1 attempts))))))))
+
+          (test-assert "first container running"
+            (marionette-eval
+             '(begin
+                (use-modules (gnu services herd))
+                (wait-for-service 'first #:timeout 120)
+                #t)
+             marionette))
+
+          (test-assert "second container running"
+           (marionette-eval
+            '(begin
+               (use-modules (gnu services herd))
+               (wait-for-service 'second #:timeout 120)
+               #t)
+            marionette))
+
+          (test-assert "passing host environment variables"
+            (begin
+              (define (run-test)
+                (marionette-eval
+                 `(begin
+                    (use-modules (ice-9 popen)
+                                 (ice-9 rdelim))
+
+                    (define slurp
+                      (lambda args
+                        (let* ((port (apply open-pipe* OPEN_READ args))
+                               (output (let ((line (read-line port)))
+                                         (if (eof-object? line)
+                                             ""
+                                             line)))
+                               (status (close-pipe port)))
+                          output)))
+
+                    (slurp
+                     "/run/current-system/profile/bin/docker"
+                     "exec" "first"
+                     "/bin/guile" "-c" "(display (getenv \"VARIABLE\"))"))
+                 marionette))
+              ;; Allow image to be loaded on slower machines
+              (let loop ((attempts 0))
+                (if (= attempts 180)
+                    (error "Service didn't come up after more than 180 seconds")
+                    (if (equal? "value"
+                                (run-test))
+                        #t
+                        (begin
+                          (sleep 1)
+                          (loop (+ 1 attempts))))))))
+
+          (test-equal "mounting host files"
+            "hello"
+            (marionette-eval
+             `(begin
+                (use-modules (ice-9 popen)
+                             (ice-9 rdelim))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ args))
+                           (output (let ((line (read-line port)))
+                                     (if (eof-object? line)
+                                         ""
+                                         line)))
+                           (status (close-pipe port)))
+                      output)))
+
+                (slurp
+                 "/run/current-system/profile/bin/docker"
+                 "exec" "second"
+                 "/bin/guile" "-c" "(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(display (call-with-input-file \"/shared.txt\" read-line)))"))
+             marionette))
+
+          (test-equal "write to volumes"
+            "world"
+            (marionette-eval
+             `(begin
+                (use-modules (ice-9 popen)
+                             (ice-9 rdelim))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ args))
+                           (output (let ((line (read-line port)))
+                                     (if (eof-object? line)
+                                         ""
+                                         line)))
+                           (status (close-pipe port)))
+                      output)))
+
+                (slurp
+                 "/run/current-system/profile/bin/docker"
+                 "exec" "first"
+                 "/bin/guile" "-c" "(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(call-with-output-file \"/my-volume/out.txt\" (lambda (p) (display \"world\" p))))")
+                (slurp
+                 "/run/current-system/profile/bin/docker"
+                 "exec" "second"
+                 "/bin/guile" "-c" "(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(display (call-with-input-file \"/my-volume/out.txt\" read-line)))"))
+             marionette))
+
+          (test-equal "can read ports over network"
+            "out of office"
+            (marionette-eval
+             `(begin
+                (use-modules (ice-9 popen)
+                             (ice-9 rdelim))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ args))
+                           (output (let ((line (read-line port)))
+                                     (if (eof-object? line)
+                                         ""
+                                         line)))
+                           (status (close-pipe port)))
+                      output)))
+
+                (slurp
+                 "/run/current-system/profile/bin/docker"
+                 "exec" "second"
+                 "/bin/guile" "-c" "(begin (use-modules (web client))
+(define-values (response out)
+  (http-get \"http://first:8080\"))
+(display out))"))
+             marionette))
+
+          (test-end))))
+
+  (gexp->derivation "docker-oci-service-test" test))
+
+(define %test-oci-service-docker
+  (system-test
+   (name "oci-service-docker")
+   (description "Test Docker backed OCI provisioning service.")
+   (value (run-docker-oci-service-test))))
