@@ -41095,7 +41095,7 @@ possible to securely set values in the container environment.  This field's
 value can be a list of pairs or strings, even mixed:
 
 @lisp
-(list '("LANGUAGE\" . "eo:ca:eu")
+(list '("LANGUAGE" . "eo:ca:eu")
       "JAVA_HOME=/opt/java")
 @end lisp
 
