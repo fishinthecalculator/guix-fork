@@ -36,6 +36,7 @@
 ;;; Copyright © 2024 Raven Hallsby <karl@hallsby.com>
 ;;; Copyright © 2024 jgart <jgart@dismail.de>
 ;;; Copyright © 2024 Ashish SHUKLA <ashish.is@lostca.se>
+;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -80,6 +81,7 @@
   #:use-module (gnu packages dns)
   #:use-module (gnu packages docbook)
   #:use-module (gnu packages documentation)
+  #:use-module (gnu packages elf)
   #:use-module (gnu packages figlet)
   #:use-module (gnu packages firmware)
   #:use-module (gnu packages flex)
@@ -112,6 +114,7 @@
   #:use-module (gnu packages nettle)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages ninja)
+  #:use-module (gnu packages ocaml)
   #:use-module (gnu packages onc-rpc)
   #:use-module (gnu packages package-management)
   #:use-module (gnu packages pciutils)
@@ -2902,3 +2905,118 @@ This package also contains the Berkeley Boot Loader, @command{bbl}, which is a
 supervisor execution environment for tethered RISC-V systems.  It is designed
 to host the RISC-V Linux port.")
     (license license:bsd-3)))
+
+(define-public hivex
+  (package
+    (name "hivex")
+    (version "1.3.24")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://libguestfs.org/download/"
+                                  name "/" name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0g0rib62qg81fda8lxsaa7a1ykqy4rl5sq185pdqm9y9xifa8bx5"))))
+    (build-system gnu-build-system)
+    (native-inputs (list automake
+                         autoconf
+                         gettext-minimal
+                         libtool
+                         ocaml
+                         patchelf
+                         pkg-config
+                         perl-io-stringy
+                         python-wrapper
+                         ruby
+                         ruby-rake
+                         ruby-rdoc))
+    (inputs
+     (list bash-minimal
+           libxml2
+           perl
+           readline))
+    (arguments
+     (list
+      #:configure-flags
+      #~(list
+         "--disable-static"
+         "--with-readline"
+         "--disable-rpath")
+      #:phases
+      #~(modify-phases %standard-phases
+          (replace 'bootstrap
+            (lambda _
+              (invoke "autoreconf" "-vif")))
+          (add-after 'unpack 'patch-makefiles
+            (lambda _
+              (let* ((current-system (or #$(%current-target-system)
+                                         #$(%current-system)))
+                     (ocamllib
+                      (string-append #$output "/lib/ocaml/"
+                                     #$(package-version
+                                        (this-package-native-input "ocaml")) "/site-lib"))
+                     (python-installdir
+                      (string-append #$output "/lib/python"
+                                     #$(version-major+minor
+                                        (package-version
+                                         (this-package-native-input
+                                          "python-wrapper")))
+                                     "/site-packages"))
+                     (ruby-version
+                      #$(package-version
+                         (this-package-native-input "ruby")))
+                     (ruby-libdir
+                      (string-append #$output
+                                     "/lib/ruby/site_ruby/"
+                                     ruby-version))
+                     (ruby-archdir
+                      (string-append ruby-libdir "/" current-system)))
+                (substitute* "lib/Makefile.am"
+                  (((string-append "\\$\\(VERSION_SCRIPT_FLAGS\\)"
+                                   "\\$\\(srcdir\\)/hivex\\.syms"))
+                   ""))
+                (substitute* "python/Makefile.am"
+                  (("\\$\\(PYTHON_INSTALLDIR\\)")
+                   python-installdir))
+                (substitute* "ocaml/Makefile.am"
+                  (("\\$\\(DESTDIR\\)\\$\\(OCAMLLIB\\)")
+                   ocamllib))
+                (substitute* "ruby/Makefile.am"
+                  (("\\$\\(DESTDIR\\)\\$\\(RUBY_ARCHDIR\\)")
+                   ruby-archdir)
+                  (("\\$\\(DESTDIR\\)\\$\\(RUBY_LIBDIR\\)")
+                   ruby-libdir)))))
+          (add-before 'install 'set-rpath
+            (lambda _
+              (for-each
+               (lambda (sofile)
+                 ;; The ‘validate-runpath’ phase fails to find libhivex.so.0.
+                 (invoke (string-append #$(this-package-native-input "patchelf")
+                                        "/bin/patchelf")
+                         "--add-rpath" (string-append #$output "/lib") sofile))
+               '("perl/blib/arch/auto/Win/Hivex/Hivex.so"
+                 "ruby/ext/hivex/_hivex.so"))))
+          (add-after 'install 'wrap-binaries
+            (lambda _
+              (let ((hivexregedit
+                     (string-append #$output "/bin/hivexregedit"))
+                    (hivexml
+                     (string-append #$output "/bin/hivexml")))
+                (wrap-program hivexregedit
+                  `("PERL5LIB" ":" prefix
+                    (,(string-append #$output "/lib/perl5/site_perl")))
+                  `("PATH" ":" prefix
+                    (,(string-append #$output "/bin"))))
+                (wrap-program hivexml
+                  `("PATH" ":" prefix
+                    (,(string-append #$output "/bin"))))))))))
+    (home-page "https://github.com/libguestfs/hivex")
+    (synopsis "Windows registry hive extraction library")
+    (description
+     "This package provides a self-contained library for reading and writing
+Windows Registry \"hive\" binary files.  Unlike many other tools in this area,
+it doesn't use the textual @code{.REG} format for output, because parsing that
+is as much trouble as parsing the original binary format.  Instead it makes the
+file available through a C API, or through a separate program to export the
+hive as XML.")
+    (license license:lgpl2.1)))
