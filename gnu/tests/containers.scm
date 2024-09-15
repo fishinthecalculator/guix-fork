@@ -432,7 +432,7 @@ standard output device and then enters a new line.")
                      ((pid) (number? pid))))))
              marionette))
 
-          (sleep 10) ; let service start
+          (sleep 60) ; let image load
 
           (test-assert "docker-guile running"
             (marionette-eval

@@ -32,9 +32,11 @@
   #:use-module (gnu system image)
   #:use-module (gnu system shadow)
   #:use-module (gnu system pam)
+  #:use-module (guix build-system trivial)
   #:use-module (guix diagnostics)
   #:use-module (guix gexp)
   #:use-module (guix i18n)
+  #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix monads)
   #:use-module (guix packages)
   #:use-module (guix profiles)
@@ -62,6 +64,12 @@
             rootless-podman-service-etc
 
             rootless-podman-service-type
+
+            %oci-supported-runtimes
+            oci-runtime-requirement
+            oci-runtime-cli
+            oci-runtime-name
+            oci-runtime-group
 
             oci-image
             oci-image?
@@ -380,10 +388,10 @@ to be shared.  This service sets it so.")
           ;; Use binaries from PATH to allow
           ;; users to override them with their
           ;; respective Guix System services.
-          "podman"
+          "/run/current-system/profile/bin/podman"
           (file-append podman "/bin/podman"))
       (if system?
-          "docker"
+          "/run/current-system/profile/bin/docker"
           (file-append docker-cli "/bin/docker"))))
 
 (define (oci-runtime-name runtime)
@@ -394,14 +402,16 @@ to be shared.  This service sets it so.")
   (if (maybe-value-set? maybe-group)
       (if (eq? 'podman runtime)
           "cgroup"
-          "docker")))
+          "docker")
+      "docker"))
 
 (define (oci-sanitize-runtime value)
   (unless (member value %oci-supported-runtimes)
     (raise
      (formatted-message
       (G_ "OCI runtime must be a symbol and one of ~a,
-but ~a was found") %oci-supported-runtimes value))))
+but ~a was found") %oci-supported-runtimes value)))
+  value)
 
 (define (oci-sanitize-pair pair delimiter)
   (define (valid? member)
@@ -783,22 +793,19 @@ volumes to add."))
        (oci-image-repository image))))
 
 (define (oci-container-shepherd-name runtime config)
-  (define name (symbol->string
-                (oci-container-configuration-provision config)))
+  (define name (oci-container-configuration-provision config))
   (define image (oci-container-configuration-image config))
-  (string->symbol
-   (if (maybe-value-set? name)
-       name
-       (string-append (symbol->string runtime) "-"
-                      (oci-image->container-name image)))))
+
+  (if (maybe-value-set? name)
+      name
+      (string-append (symbol->string runtime) "-"
+                     (oci-image->container-name image))))
 
 (define (oci-network-shepherd-name runtime)
- (string->symbol
-  (string-append (symbol->string runtime) "-networks")))
+  (string-append (symbol->string runtime) "-networks"))
 
 (define (oci-volume-shepherd-name runtime)
-  (string->symbol
-   (string-append (symbol->string runtime) "-volumes")))
+  (string-append (symbol->string runtime) "-volumes"))
 
 (define oci-container-configuration->options
   (lambda (config)
@@ -985,7 +992,11 @@ operating-system, gexp or file-like records but ~a was found")
                (invoke #$(oci-runtime-cli runtime) "tag" repository&tag #$tag)
                (format #t "Tagged ~a with ~a...~%" #$tarball #$tag))))))))
 
-(define* (oci-container-shepherd-service runtime config #:key (user #f) (group #f))
+(define* (oci-container-shepherd-service runtime config
+                                         #:key
+                                         (oci-requirement '())
+                                         (user #f)
+                                         (group #f))
   (let* ((actions (oci-container-configuration-shepherd-actions config))
          (auto-start?
           (oci-container-configuration-auto-start? config))
@@ -997,7 +1008,6 @@ operating-system, gexp or file-like records but ~a was found")
           (oci-container-configuration-host-environment config))
          (command (oci-container-configuration-command config))
          (log-file (oci-container-configuration-log-file config))
-         (provision (oci-container-configuration-provision config))
          (requirement (oci-container-configuration-requirement config))
          (respawn?
           (oci-container-configuration-respawn? config))
@@ -1012,8 +1022,7 @@ operating-system, gexp or file-like records but ~a was found")
     (shepherd-service (provision `(,(string->symbol name)))
                       (requirement `(,@(oci-runtime-requirement runtime)
                                      user-processes
-                                     ,(oci-network-shepherd-name runtime)
-                                     ,(oci-volume-shepherd-name runtime)
+                                     ,@oci-requirement
                                      ,@requirement))
                       (respawn? respawn?)
                       (auto-start? auto-start?)
@@ -1182,17 +1191,39 @@ operating-system, gexp or file-like records but ~a was found")
 
 (define (oci-configuration->shepherd-services config)
   (let* ((runtime (oci-configuration-runtime config))
-         (user (oci-container-configuration-user config))
-         (maybe-group (oci-container-configuration-group config))
+         (networks?
+          (> (length (oci-configuration-networks config)) 0))
+         (networks-requirement
+          (if networks?
+              (list (oci-network-shepherd-name runtime))
+              '()))
+         (volumes?
+          (> (length (oci-configuration-volumes config)) 0))
+         (volumes-requirement
+          (if volumes?
+              (list (oci-volume-shepherd-name runtime))
+              '()))
+         (user (oci-configuration-user config))
+         (maybe-group (oci-configuration-group config))
          (group (oci-runtime-group runtime maybe-group)))
-    (append (map (lambda (c)
-                   (oci-container-shepherd-service runtime c
-                                                   #:user user
-                                                   #:group group))
-                 (oci-configuration-containers config))
-            (list
-             (oci-network-shepherd-service config #:user user #:group group)
-             (oci-volume-shepherd-service config #:user user #:group group)))))
+    (append
+     (map
+      (lambda (c)
+        (oci-container-shepherd-service
+         runtime c
+         #:user user
+         #:group group
+         #:oci-requirement
+         (append networks-requirement volumes-requirement)))
+      (oci-configuration-containers config))
+     (if networks?
+         (list
+          (oci-network-shepherd-service config #:user user #:group group))
+         '())
+     (if volumes?
+         (list
+          (oci-volume-shepherd-service config #:user user #:group group))
+         '()))))
 
 (define (oci-service-subids c)
   (define runtime
@@ -1226,7 +1257,8 @@ operating-system, gexp or file-like records but ~a was found")
              (raise
               (formatted-message
                (G_ "Duplicated ~a: ~a. ~as names should be unique, please
-remove the duplicate.") object (get-name element) object))))
+remove the duplicate.") object (get-name element) object)))
+           (cons element merged))
          (cdr lst)))))
 
 (define (oci-extension-merge a b)
@@ -1255,19 +1287,21 @@ remove the duplicate.") object (get-name element) object))))
 (define oci-service-type
   (service-type (name 'oci)
                 (extensions
-                 (list (service-extension profile-service-type
-                                          (lambda (config)
-                                            (list bash-minimal
-                                                  (if (eq? 'podman
-                                                           (oci-configuration-runtime config))
-                                                      podman
-                                                      docker-cli))))
-                       (service-extension subids-service-type
-                                          oci-service-subids)
-                       (service-extension account-service-type
-                                          oci-service-accounts)
-                       (service-extension shepherd-root-service-type
-                                          oci-configuration->shepherd-services)))
+                 (list
+                  (service-extension profile-service-type
+                                     (lambda (config)
+                                       (list bash-minimal
+                                             (if
+                                              (eq? 'podman
+                                                   (oci-configuration-runtime
+                                                    config))
+                                              podman docker-cli))))
+                  (service-extension subids-service-type
+                                     oci-service-subids)
+                  (service-extension account-service-type
+                                     oci-service-accounts)
+                  (service-extension shepherd-root-service-type
+                                     oci-configuration->shepherd-services)))
                 ;; Concatenate OCI object lists.
                 (compose (lambda (args)
                            (fold oci-extension-merge
@@ -1277,23 +1311,25 @@ remove the duplicate.") object (get-name element) object))))
                  (lambda (config extension)
                    (oci-configuration
                     (inherit config)
-                    (containers (oci-objects-merge-lst
-                                 (oci-extension-containers config)
-                                 (oci-extension-containers extension)
-                                 "container"
-                                 (lambda (config)
-                                   (define maybe-name (oci-container-configuration-provision config))
-                                   (if (maybe-value-set? maybe-name)
-                                       (symbol->string maybe-name)
-                                       (oci-image->container-name
-                                        (oci-container-configuration-image config))))))
+                    (containers
+                     (oci-objects-merge-lst
+                      (oci-configuration-containers config)
+                      (oci-extension-containers extension)
+                      "container"
+                      (lambda (config)
+                        (define maybe-name
+                          (oci-container-configuration-provision config))
+                        (if (maybe-value-set? maybe-name)
+                            (symbol->string maybe-name)
+                            (oci-image->container-name
+                             (oci-container-configuration-image config))))))
                     (networks (oci-objects-merge-lst
-                               (oci-extension-networks config)
+                               (oci-configuration-networks config)
                                (oci-extension-networks extension)
                                "network"
                                oci-network-shepherd-name))
                     (volumes (oci-objects-merge-lst
-                              (oci-extension-volumes config)
+                              (oci-configuration-volumes config)
                               (oci-extension-volumes extension)
                               "volume"
                               oci-volume-shepherd-name)))))
@@ -1303,8 +1339,16 @@ remove the duplicate.") object (get-name element) object))))
 as containers networks and volumes.")))
 
 (define oci-container-service-type
-  (service-type (inherit oci-container-service-type)
-                (extensions (list (service-extension oci-service-type
-                                                     (lambda (containers)
-                                                       (oci-extension
-                                                        (containers containers))))))))
+  (service-type (name 'oci-container)
+                (extensions
+                 (list
+                  (service-extension oci-service-type
+                                     (lambda (containers)
+                                       (oci-extension
+                                        (containers containers))))))
+                (default-value '())
+                (extend append)
+                (compose concatenate)
+                (description
+                 "This service allows the management of OCI
+containers as Shepherd services.")))
