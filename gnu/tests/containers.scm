@@ -42,7 +42,9 @@
   #:use-module ((guix scripts pack) #:prefix pack:)
   #:use-module (guix store)
   #:export (%test-rootless-podman
-            %test-oci-container))
+            %test-oci-container
+            %test-oci-service-docker
+            %test-oci-service-podman))
 
 
 (define %rootless-podman-os
@@ -482,3 +484,238 @@ standard output device and then enters a new line.")
    (name "oci-container")
    (description "Test OCI backed Shepherd service.")
    (value (run-oci-container-test))))
+
+
+(define %oci-service-os-docker
+  (simple-operating-system
+   (service dhcp-client-service-type)
+   (service dbus-root-service-type)
+   (service polkit-service-type)
+   (service elogind-service-type)
+   (service containerd-service-type)
+   (service docker-service-type)
+   (simple-service 'accounts
+                   account-service-type
+                   (list (user-group
+                          (name "docker")
+                          (system? #t))))
+   (extra-special-file "/shared.txt"
+                       (plain-file "shared.txt" "hello"))
+   (service oci-service-type
+            (oci-configuration
+             (containers
+              (list
+               (oci-container-configuration
+                (image
+                 (oci-image
+                  (repository "guile")
+                  (value
+                   (specifications->manifest '("guile")))
+                  (pack-options
+                   '(#:symlinks (("/bin" -> "bin"))))))
+                (entrypoint
+                 "/bin/guile")
+                (command
+                 '("-c" "(let l ((c 300))(display c)(sleep 1)(when(positive? c)(l (- c 1))))"))
+                (host-environment
+                 '(("VARIABLE" . "value")))
+                (volumes
+                 '(("/shared.txt" . "/shared.txt:ro")))
+                (extra-arguments
+                 '("--env" "VARIABLE")))))))))
+
+(define %oci-service-os-podman
+  (simple-operating-system
+   (service dhcp-client-service-type)
+   (service dbus-root-service-type)
+   (service polkit-service-type)
+   (service elogind-service-type)
+   (service rootless-podman-service-type
+            (rootless-podman-configuration
+             (subgids
+              (list (subid-range (name "alice"))))
+             (subuids
+              (list (subid-range (name "alice"))))))
+   (service iptables-service-type)
+   (extra-special-file "/shared.txt"
+                       (plain-file "shared.txt" "hello"))
+   (service oci-service-type
+            (oci-configuration
+             (runtime 'podman)
+             (containers
+              (list
+               (oci-container-configuration
+                (image
+                 (oci-image
+                  (repository "guile")
+                  (value
+                   (specifications->manifest '("guile")))
+                  (pack-options
+                   '(#:symlinks (("/bin" -> "bin"))))))
+                (entrypoint
+                 "/bin/guile")
+                (command
+                 '("-c" "(let l ((c 300))(display c)(sleep 1)(when(positive? c)(l (- c 1))))"))
+                (host-environment
+                 '(("VARIABLE" . "value")))
+                (volumes
+                 '(("/shared.txt" . "/shared.txt:ro")))
+                (extra-arguments
+                 '("--env" "VARIABLE")))))))))
+
+(define (run-oci-service-test runtime oci-os)
+  (define os
+    (marionette-operating-system
+     (operating-system-with-gc-roots
+      oci-os
+      (list))
+     #:imported-modules '((gnu services herd)
+                          (guix combinators))))
+
+  (define vm
+    (virtual-machine
+     (operating-system os)
+     (volatile? #f)
+     (memory-size 1024)
+     (disk-image-size (* 3000 (expt 2 20)))
+     (port-forwardings '())))
+
+  (define test
+    (with-imported-modules '((gnu build marionette))
+      #~(begin
+          (use-modules (srfi srfi-11) (srfi srfi-64)
+                       (ice-9 match)
+                       (gnu build marionette))
+          (define runtime-cli
+            (if (eq? '#$runtime 'podman)
+                "/run/current-system/profile/bin/podman"
+                "/run/current-system/profile/bin/docker"))
+          (define runtime-name (symbol->string '#$runtime))
+          (define out-dir "/tmp")
+          (define marionette
+            ;; Relax timeout to accommodate older systems.
+            (make-marionette (list #$vm) #:timeout 60))
+
+          (test-runner-current (system-test-runner #$output))
+          (test-begin (string-append "oci-service-" runtime-name))
+
+          (sleep 60)                    ; let image load
+
+          (test-assert (string-append "container running - " runtime-name)
+            (marionette-eval
+             `(begin
+                (use-modules (gnu services herd))
+                (match (start-service (symbol-append '#$runtime '-guile))
+                  (#f #f)
+                  (('service response-parts ...)
+                   (match (assq-ref response-parts 'running)
+                     ((pid) (number? pid))))))
+             marionette))
+
+          (sleep 60)                    ; let image load
+
+          (test-equal (string-append "passing host environment variables and volumes - " runtime-name)
+            '("value" "hello")
+            (marionette-eval
+             `(begin
+                (use-modules (srfi srfi-1)
+                             (ice-9 popen)
+                             (ice-9 match)
+                             (ice-9 rdelim)
+                             (ice-9 textual-ports))
+
+                (define (wait-for-file file)
+                  ;; Wait until FILE shows up.
+                  (let loop ((i 60))
+                    (cond ((file-exists? file)
+                           #t)
+                          ((zero? i)
+                           (error "file didn't show up" file))
+                          (else
+                           (pk 'wait-for-file file)
+                           (sleep 1)
+                           (loop (- i 1))))))
+
+                (define (read-lines file-or-port)
+                  (define (loop-lines port)
+                    (let loop ((lines '()))
+                      (match (read-line port)
+                        ((? eof-object?)
+                         (reverse lines))
+                        (line
+                         (loop (cons line lines))))))
+
+                  (if (port? file-or-port)
+                      (loop-lines file-or-port)
+                      (call-with-input-file file-or-port
+                        loop-lines)))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ
+                                        (list "sh" "-l" "-c"
+                                              (string-join
+                                               args
+                                               " "))))
+                           (output (read-lines port))
+                           (status (close-pipe port)))
+                      output)))
+
+                (match (primitive-fork)
+                  (0
+                   (dynamic-wind
+                     (const #f)
+                     (lambda ()
+                       (when (eq? '#$runtime 'podman)
+                         (setgid (passwd:gid (getpwnam "alice")))
+                         (setuid (passwd:uid (getpw "alice"))))
+
+                       (let* ((response1 (slurp
+                                          ,runtime-cli
+                                          "exec" (string-append ,runtime-name "-guile")
+                                          "/bin/guile" "-c" "'(display (getenv \"VARIABLE\"))'"))
+                              (response2 (slurp
+                                          ,runtime-cli
+                                          "exec" (string-append ,runtime-name "-guile")
+                                          "/bin/guile" "-c" "'(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(display (call-with-input-file \"/shared.txt\" read-line)))'")))
+                         (call-with-output-file (string-append ,out-dir "/response1")
+                           (lambda (port)
+                             (display (string-join response1 " ") port)))
+                         (call-with-output-file (string-append ,out-dir "/response2")
+                           (lambda (port)
+                             (display (string-join response2 " ") port)))))
+                     (lambda ()
+                       (primitive-exit 127))))
+                  (pid
+                   (cdr (waitpid pid))))
+                (display (call-with-input-file "/var/log/messages" get-string-all))
+                (wait-for-file (string-append ,out-dir "/response2"))
+                (append
+                 (slurp "cat" (string-append ,out-dir "/response1"))
+                 (slurp "cat" (string-append ,out-dir "/response2"))))
+             marionette))
+
+          (test-end))))
+
+  (gexp->derivation (string-append "oci-service-test-"
+                                   (symbol->string runtime))
+                    test))
+
+(define (run-oci-service-test-docker)
+  (run-oci-service-test 'docker %oci-service-os-docker))
+
+(define (run-oci-service-test-podman)
+  (run-oci-service-test 'podman %oci-service-os-podman))
+
+(define %test-oci-service-docker
+  (system-test
+   (name "oci-service-docker")
+   (description "Test OCI provisioning Guix System service with Docker backend.")
+   (value (run-oci-service-test-docker))))
+
+(define %test-oci-service-podman
+  (system-test
+   (name "oci-service-podman")
+   (description "Test OCI provisioning Guix System service with Podman backend.")
+   (value (run-oci-service-test-podman))))
