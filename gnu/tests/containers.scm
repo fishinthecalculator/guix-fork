@@ -599,7 +599,7 @@ standard output device and then enters a new line.")
           (test-runner-current (system-test-runner #$output))
           (test-begin (string-append "oci-service-" runtime-name))
 
-          (sleep 60)                    ; let image load
+          (sleep 120)                    ; let image load
 
           (test-assert (string-append "container running - " runtime-name)
             (marionette-eval
@@ -612,7 +612,7 @@ standard output device and then enters a new line.")
                      ((pid) (number? pid))))))
              marionette))
 
-          (sleep 60)                    ; let image load
+          (sleep 120)                    ; let image load
 
           (test-equal (string-append "passing host environment variables and volumes - " runtime-name)
             '("value" "hello")

@@ -806,10 +806,11 @@ volumes to add."))
   (define name (oci-container-configuration-provision config))
   (define image (oci-container-configuration-image config))
 
-  (if (maybe-value-set? name)
-      name
-      (string-append (pk 'string (symbol->string (pk 'symbol runtime))) "-"
-                     (oci-image->container-name image))))
+  (pk 'name
+      (if (maybe-value-set? name)
+          name
+          (string-append (pk 'string (symbol->string (pk 'symbol runtime))) "-"
+                         (oci-image->container-name image)))))
 
 (define (oci-network-shepherd-name runtime)
   (string-append (symbol->string runtime) "-networks"))
