@@ -8264,17 +8264,17 @@ types.")
      "This Rust crate provides macros to generate bitfield-like struct.")
     (license (list license:expat license:asl2.0))))
 
-(define-public rust-bitflags-2
+(define-public rust-bitflags-2.6
   (package
     (name "rust-bitflags")
-    (version "2.5.0")
+    (version "2.6.0")
     (source
      (origin
        (method url-fetch)
        (uri (crate-uri "bitflags" version))
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "1h91vdx1il069vdiiissj8ymzj130rbiic0dbs77yxjgjim9sjyg"))))
+        (base32 "1pkidwzn3hnxlsl8zizh0bncgbjnw7c41cx7bby26ncbzmiznj5h"))))
     (build-system cargo-build-system)
     (arguments
      `(#:tests? #f      ; Not all files included.
@@ -8299,6 +8299,36 @@ types.")
 behave like a set of bitflags.")
     (license (list license:asl2.0
                    license:expat))))
+
+(define-public rust-bitflags-2
+  (package
+    (inherit rust-bitflags-2.6)
+    (name "rust-bitflags")
+    (version "2.5.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "bitflags" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1h91vdx1il069vdiiissj8ymzj130rbiic0dbs77yxjgjim9sjyg"))))
+    (arguments
+     `(#:tests? #f      ; Not all files included.
+       #:cargo-inputs
+       (("rust-arbitrary" ,rust-arbitrary-1)
+        ("rust-bytemuck" ,rust-bytemuck-1)
+        ("rust-compiler-builtins" ,rust-compiler-builtins-0.1)
+        ("rust-rustc-std-workspace-core" ,rust-rustc-std-workspace-core-1)
+        ("rust-serde" ,rust-serde-1))
+       #:cargo-development-inputs
+       (("rust-arbitrary" ,rust-arbitrary-1)
+        ("rust-bytemuck" ,rust-bytemuck-1)
+        ("rust-rustversion" ,rust-rustversion-1)
+        ("rust-serde-derive" ,rust-serde-derive-1)
+        ("rust-serde-json" ,rust-serde-json-1)
+        ("rust-serde-test" ,rust-serde-test-1)
+        ("rust-trybuild" ,rust-trybuild-1)
+        ("rust-zerocopy" ,rust-zerocopy-0.6))))))
 
 (define-public rust-bitflags-1
   (package
