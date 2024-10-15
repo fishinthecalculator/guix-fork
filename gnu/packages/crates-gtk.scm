@@ -2591,20 +2591,20 @@
     (description "Rust bindings for the Graphene library.")
     (license license:expat)))
 
-(define-public rust-graphene-sys-0.18
+(define-public rust-graphene-sys-0.19
   (package
     (name "rust-graphene-sys")
-    (version "0.18.1")
+    (version "0.19.8")
     (source
      (origin
        (method url-fetch)
        (uri (crate-uri "graphene-sys" version))
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "0n8zlg7z26lwpnvlqp1hjlgrs671skqwagdpm7r8i1zwx3748hfc"))))
+        (base32 "01dg4wgqxaqkdv0vl7hr14b6kbbm96gwdsb5a2ss9jxw8h4hwlrg"))))
     (build-system cargo-build-system)
     (arguments
-     `(#:cargo-inputs (("rust-glib-sys" ,rust-glib-sys-0.18)
+     `(#:cargo-inputs (("rust-glib-sys" ,rust-glib-sys-0.19)
                        ("rust-libc" ,rust-libc-0.2)
                        ("rust-pkg-config" ,rust-pkg-config-0.3)
                        ("rust-system-deps" ,rust-system-deps-6))
@@ -2616,6 +2616,26 @@
     (synopsis "FFI bindings to libgraphene-1.0")
     (description "FFI bindings to libgraphene-1.0.")
     (license license:expat)))
+
+(define-public rust-graphene-sys-0.18
+  (package
+    (inherit rust-graphene-sys-0.19)
+    (name "rust-graphene-sys")
+    (version "0.18.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "graphene-sys" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0n8zlg7z26lwpnvlqp1hjlgrs671skqwagdpm7r8i1zwx3748hfc"))))
+    (arguments
+     `(#:cargo-inputs (("rust-glib-sys" ,rust-glib-sys-0.18)
+                       ("rust-libc" ,rust-libc-0.2)
+                       ("rust-pkg-config" ,rust-pkg-config-0.3)
+                       ("rust-system-deps" ,rust-system-deps-6))
+       #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
+                                   ("rust-tempfile" ,rust-tempfile-3))))))
 
 (define-public rust-gsk4-0.7
   (package
@@ -2647,8 +2667,39 @@
     (description "Rust bindings of the GSK 4 library.")
     (license license:expat)))
 
+(define-public rust-gsk4-sys-0.8
+  (package
+    (name "rust-gsk4-sys")
+    (version "0.8.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "gsk4-sys" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0mbdlm9qi1hql48rr29vsj9vlqwc7gxg67wg1q19z67azwz9xg8j"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-cairo-sys-rs" ,rust-cairo-sys-rs-0.19)
+                       ("rust-gdk4-sys" ,rust-gdk4-sys-0.8)
+                       ("rust-glib-sys" ,rust-glib-sys-0.19)
+                       ("rust-gobject-sys" ,rust-gobject-sys-0.19)
+                       ("rust-graphene-sys" ,rust-graphene-sys-0.19)
+                       ("rust-libc" ,rust-libc-0.2)
+                       ("rust-pango-sys" ,rust-pango-sys-0.19)
+                       ("rust-system-deps" ,rust-system-deps-6))
+       #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
+                                   ("rust-tempfile" ,rust-tempfile-3))))
+    (native-inputs (list pkg-config))
+    (inputs (list cairo gdk-pixbuf graphene gtk pango))
+    (home-page "https://gtk-rs.org/")
+    (synopsis "FFI bindings of GSK 4")
+    (description "This package provides FFI bindings of GSK 4.")
+    (license license:expat)))
+
 (define-public rust-gsk4-sys-0.7
   (package
+    (inherit rust-gsk4-sys-0.8)
     (name "rust-gsk4-sys")
     (version "0.7.3")
     (source
@@ -2658,7 +2709,6 @@
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32 "0mbdlm9qi1hql48rr29vsj9vlqwc7gxg67wg1q19z67azwz9xg8j"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:tests? #f  ; `GskFillRule` undeclared
        #:cargo-inputs (("rust-cairo-sys-rs" ,rust-cairo-sys-rs-0.18)
@@ -2670,13 +2720,7 @@
                        ("rust-pango-sys" ,rust-pango-sys-0.18)
                        ("rust-system-deps" ,rust-system-deps-6))
        #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
-                                   ("rust-tempfile" ,rust-tempfile-3))))
-    (native-inputs (list pkg-config))
-    (inputs (list cairo gdk-pixbuf graphene gtk pango))
-    (home-page "https://gtk-rs.org/")
-    (synopsis "FFI bindings of GSK 4")
-    (description "This package provides FFI bindings of GSK 4.")
-    (license license:expat)))
+                                   ("rust-tempfile" ,rust-tempfile-3))))))
 
 (define-public rust-gstreamer-0.18
   (package
@@ -3223,8 +3267,42 @@ library.")
     (description "Macros helpers for GTK 4 bindings.")
     (license license:expat)))
 
+(define-public rust-gtk4-sys-0.8
+  (package
+    (name "rust-gtk4-sys")
+    (version "0.8.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "gtk4-sys" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1dapgvbkhf0kcm2jfmj8r98wzyhwmr5iv358dvb73sl5gxmsi2lc"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-cairo-sys-rs" ,rust-cairo-sys-rs-0.19)
+                       ("rust-gdk-pixbuf-sys" ,rust-gdk-pixbuf-sys-0.19)
+                       ("rust-gdk4-sys" ,rust-gdk4-sys-0.8)
+                       ("rust-gio-sys" ,rust-gio-sys-0.19)
+                       ("rust-glib-sys" ,rust-glib-sys-0.19)
+                       ("rust-gobject-sys" ,rust-gobject-sys-0.19)
+                       ("rust-graphene-sys" ,rust-graphene-sys-0.19)
+                       ("rust-gsk4-sys" ,rust-gsk4-sys-0.7)
+                       ("rust-libc" ,rust-libc-0.2)
+                       ("rust-pango-sys" ,rust-pango-sys-0.19)
+                       ("rust-system-deps" ,rust-system-deps-6))
+       #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
+                                   ("rust-tempfile" ,rust-tempfile-3))))
+    (native-inputs (list pkg-config))
+    (inputs (list cairo gdk-pixbuf graphene gtk pango))
+    (home-page "https://gtk-rs.org/")
+    (synopsis "FFI bindings of GTK 4")
+    (description "This package provides FFI bindings of GTK 4.")
+    (license license:expat)))
+
 (define-public rust-gtk4-sys-0.7
   (package
+    (inherit rust-gtk4-sys-0.8)
     (name "rust-gtk4-sys")
     (version "0.7.3")
     (source
@@ -3234,7 +3312,6 @@ library.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32 "1f2ylskyqkjdik9fij2m46pra4jagnif5xyalbxfk3334fmc9n2l"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:tests? #f ; Can't find gtk/gtk-a11y.h from gtk+
        #:cargo-inputs (("rust-cairo-sys-rs" ,rust-cairo-sys-rs-0.18)
@@ -3249,16 +3326,39 @@ library.")
                        ("rust-pango-sys" ,rust-pango-sys-0.18)
                        ("rust-system-deps" ,rust-system-deps-6))
        #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
-                                   ("rust-tempfile" ,rust-tempfile-3))))
+                                   ("rust-tempfile" ,rust-tempfile-3))))))
+
+(define-public rust-libadwaita-0.6
+  (package
+    (name "rust-libadwaita")
+    (version "0.6.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "libadwaita" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1nf5hxmk1bzjj8hxavwgz04kiv3hxb52qjh9f9gfrqdr9019kd4i"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-gdk-pixbuf" ,rust-gdk-pixbuf-0.20)
+                       ("rust-gdk4" ,rust-gdk4-0.8)
+                       ("rust-gio" ,rust-gio-0.20)
+                       ("rust-glib" ,rust-glib-0.20)
+                       ("rust-gtk4" ,rust-gtk4-0.8)
+                       ("rust-libadwaita-sys" ,rust-libadwaita-sys-0.6)
+                       ("rust-libc" ,rust-libc-0.2)
+                       ("rust-pango" ,rust-pango-0.20))))
     (native-inputs (list pkg-config))
-    (inputs (list cairo gdk-pixbuf graphene gtk pango))
-    (home-page "https://gtk-rs.org/")
-    (synopsis "FFI bindings of GTK 4")
-    (description "This package provides FFI bindings of GTK 4.")
+    (inputs (list libadwaita))
+    (home-page "https://world.pages.gitlab.gnome.org/Rust/libadwaita-rs")
+    (synopsis "Rust bindings for libadwaita")
+    (description "Rust bindings for libadwaita.")
     (license license:expat)))
 
 (define-public rust-libadwaita-0.5
   (package
+    (inherit rust-libadwaita-0.6)
     (name "rust-libadwaita")
     (version "0.5.3")
     (source
@@ -3268,7 +3368,6 @@ library.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32 "174pzn9dwsk8ikvrhx13vkh0zrpvb3rhg9yd2q5d2zjh0q6fgrrg"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs (("rust-gdk-pixbuf" ,rust-gdk-pixbuf-0.18)
                        ("rust-gdk4" ,rust-gdk4-0.7)
@@ -3277,13 +3376,7 @@ library.")
                        ("rust-gtk4" ,rust-gtk4-0.7)
                        ("rust-libadwaita-sys" ,rust-libadwaita-sys-0.5)
                        ("rust-libc" ,rust-libc-0.2)
-                       ("rust-pango" ,rust-pango-0.18))))
-    (native-inputs (list pkg-config))
-    (inputs (list libadwaita))
-    (home-page "https://world.pages.gitlab.gnome.org/Rust/libadwaita-rs")
-    (synopsis "Rust bindings for libadwaita")
-    (description "Rust bindings for libadwaita.")
-    (license license:expat)))
+                       ("rust-pango" ,rust-pango-0.18))))))
 
 (define-public rust-libadwaita-sys-0.6
   (package
