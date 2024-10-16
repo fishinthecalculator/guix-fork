@@ -5153,6 +5153,40 @@ provider")
     (description "This crate provides Soup FFI for Rust.")
     (license license:expat)))
 
+(define-public rust-sourceview5-sys-0.8
+  (package
+    (name "rust-sourceview5-sys")
+    (version "0.8.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "sourceview5-sys" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1gjpyqhynw14d6kvj71hm9ldkx0wba5vdn6f36wd5np6gjnkdhpa"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-gdk-pixbuf-sys" ,rust-gdk-pixbuf-sys-0.19)
+                       ("rust-gdk4-sys" ,rust-gdk4-sys-0.8)
+                       ("rust-gio-sys" ,rust-gio-sys-0.19)
+                       ("rust-glib-sys" ,rust-glib-sys-0.19)
+                       ("rust-gobject-sys" ,rust-gobject-sys-0.19)
+                       ("rust-gtk4-sys" ,rust-gtk4-sys-0.8)
+                       ("rust-libc" ,rust-libc-0.2)
+                       ("rust-pango-sys" ,rust-pango-sys-0.19)
+                       ("rust-system-deps" ,rust-system-deps-6))
+       #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
+                                   ("rust-tempfile" ,rust-tempfile-3))))
+    (native-inputs
+     (list pkg-config))
+    (inputs
+     (list gdk-pixbuf glib gtk gtksourceview pango))
+    (home-page "https://world.pages.gitlab.gnome.org/Rust/sourceview5-rs/")
+    (synopsis "FFI bindings for GtkSourceView 5")
+    (description
+     "This package provides FFI bindings for @code{GtkSourceView} 5.")
+    (license license:expat)))
+
 (define-public rust-webkit2gtk-sys-0.12
   (package
     (name "rust-webkit2gtk-sys")
