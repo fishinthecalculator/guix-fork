@@ -5153,6 +5153,39 @@ provider")
     (description "This crate provides Soup FFI for Rust.")
     (license license:expat)))
 
+(define-public rust-sourceview5-0.8
+  (package
+    (name "rust-sourceview5")
+    (version "0.8.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "sourceview5" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "03s1axxxzlzv8rxj1ixg7pvwzp2qrz2gjmi0y9565i0s5w7zf2wz"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-futures-channel" ,rust-futures-channel-0.3)
+                       ("rust-futures-core" ,rust-futures-core-0.3)
+                       ("rust-gdk-pixbuf" ,rust-gdk-pixbuf-0.19)
+                       ("rust-gdk4" ,rust-gdk4-0.8)
+                       ("rust-gio" ,rust-gio-0.19)
+                       ("rust-glib" ,rust-glib-0.19)
+                       ("rust-gtk4" ,rust-gtk4-0.8)
+                       ("rust-libc" ,rust-libc-0.2)
+                       ("rust-pango" ,rust-pango-0.19)
+                       ("rust-sourceview5-sys" ,rust-sourceview5-sys-0.8))))
+    (native-inputs
+     (list pkg-config))
+    (inputs
+     (list gdk-pixbuf glib gtk gtksourceview pango))
+    (home-page "https://world.pages.gitlab.gnome.org/Rust/sourceview5-rs/")
+    (synopsis "Rust bindings for GtkSourceView 5")
+    (description
+     "This package provides Rust bindings for @code{GtkSourceView} 5.")
+    (license license:expat)))
+
 (define-public rust-sourceview5-sys-0.8
   (package
     (name "rust-sourceview5-sys")
