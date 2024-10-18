@@ -93876,22 +93876,22 @@ for locating fonts.")
     (description "This package provides an implementation of zbase32.")
     (license license:lgpl3+)))
 
-(define-public rust-zbus-3
+(define-public rust-zbus-4
   (package
     (name "rust-zbus")
-    (version "3.14.1")
+    (version "4.4.0")
     (source
      (origin
        (method url-fetch)
        (uri (crate-uri "zbus" version))
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "0j5rxgszrmkk5pbpwccrvj3gflwqw8jv8wfx9v84qbl75l53kpii"))))
+        (base32 "09f7916lp7haxv1y5zgcg99ny15whi6dn3waf1afcafxx8mh35xv"))))
     (build-system cargo-build-system)
     (arguments
      `(#:tests? #f      ; Not all files included.
        #:cargo-inputs
-       (("rust-async-broadcast" ,rust-async-broadcast-0.5)
+       (("rust-async-broadcast" ,rust-async-broadcast-0.7)
         ("rust-async-executor" ,rust-async-executor-1)
         ("rust-async-fs" ,rust-async-fs-1)
         ("rust-async-io" ,rust-async-io-1)
@@ -93942,6 +93942,69 @@ for locating fonts.")
     (synopsis "API for D-Bus communication")
     (description "This package provides an API for D-Bus communication.")
     (license license:expat)))
+
+(define-public rust-zbus-3
+  (package
+    (inherit rust-zbus-4)
+    (name "rust-zbus")
+    (version "3.14.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "zbus" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0j5rxgszrmkk5pbpwccrvj3gflwqw8jv8wfx9v84qbl75l53kpii"))))
+    (arguments
+     `(#:tests? #f      ; Not all files included.
+       #:cargo-inputs
+       (("rust-async-broadcast" ,rust-async-broadcast-0.5)
+        ("rust-async-executor" ,rust-async-executor-1)
+        ("rust-async-fs" ,rust-async-fs-1)
+        ("rust-async-io" ,rust-async-io-1)
+        ("rust-async-lock" ,rust-async-lock-2)
+        ("rust-async-process" ,rust-async-process-1)
+        ("rust-async-recursion" ,rust-async-recursion-1)
+        ("rust-async-task" ,rust-async-task-4)
+        ("rust-async-trait" ,rust-async-trait-0.1)
+        ("rust-blocking" ,rust-blocking-1)
+        ("rust-byteorder" ,rust-byteorder-1)
+        ("rust-derivative" ,rust-derivative-2)
+        ("rust-enumflags2" ,rust-enumflags2-0.7)
+        ("rust-event-listener" ,rust-event-listener-2)
+        ("rust-futures-core" ,rust-futures-core-0.3)
+        ("rust-futures-sink" ,rust-futures-sink-0.3)
+        ("rust-futures-util" ,rust-futures-util-0.3)
+        ("rust-hex" ,rust-hex-0.4)
+        ("rust-nix" ,rust-nix-0.26)
+        ("rust-once-cell" ,rust-once-cell-1)
+        ("rust-ordered-stream" ,rust-ordered-stream-0.2)
+        ("rust-quick-xml" ,rust-quick-xml-0.27)
+        ("rust-rand" ,rust-rand-0.8)
+        ("rust-serde" ,rust-serde-1)
+        ("rust-serde-xml-rs" ,rust-serde-xml-rs-0.4)
+        ("rust-serde-repr" ,rust-serde-repr-0.1)
+        ("rust-sha1" ,rust-sha1-0.10)
+        ("rust-static-assertions" ,rust-static-assertions-1)
+        ("rust-tokio" ,rust-tokio-1)
+        ("rust-tokio-vsock" ,rust-tokio-vsock-0.3)
+        ("rust-tracing" ,rust-tracing-0.1)
+        ("rust-uds-windows" ,rust-uds-windows-1)
+        ("rust-vsock" ,rust-vsock-0.3)
+        ("rust-winapi" ,rust-winapi-0.3)
+        ("rust-xdg-home" ,rust-xdg-home-1)
+        ("rust-zbus-macros" ,rust-zbus-macros-3)
+        ("rust-zbus-names" ,rust-zbus-names-2)
+        ("rust-zvariant" ,rust-zvariant-3))
+       #:cargo-development-inputs
+       (("rust-async-std" ,rust-async-std-1)
+        ("rust-doc-comment" ,rust-doc-comment-0.3)
+        ("rust-futures-util" ,rust-futures-util-0.3)
+        ("rust-ntest" ,rust-ntest-0.9)
+        ("rust-tempfile" ,rust-tempfile-3)
+        ("rust-test-log" ,rust-test-log-0.2)
+        ("rust-tokio" ,rust-tokio-1)
+        ("rust-tracing-subscriber" ,rust-tracing-subscriber-0.3))))))
 
 (define-public rust-zbus-1
   (package
