@@ -36,7 +36,7 @@
 ;;; Copyright © 2019 Danny Milosavljevic <dannym@scratchpost.org>
 ;;; Copyright © 2019, 2020, 2022 Marius Bakke <marius@gnu.org>
 ;;; Copyright © 2019 Florian Pelz <pelzflorian@pelzflorian.de>
-;;; Copyright © 2019 Giacomo Leidi <goodoldpaul@autistici.org>
+;;; Copyright © 2019, 2024 Giacomo Leidi <goodoldpaul@autistici.org>
 ;;; Copyright © 2019 Jelle Licht <jlicht@fsfe.org>
 ;;; Copyright © 2019 Jonathan Frederickson <jonathan@terracrypt.net>
 ;;; Copyright © 2019-2024 Maxim Cournoyer <maxim.cournoyer@gmail.com>
@@ -11009,6 +11009,117 @@ etc.) to create metacontacts.  It's written in Vala, which generates C code when
 compiled.")
     (home-page "https://wiki.gnome.org/Projects/Folks")
     (license license:lgpl2.1+)))
+
+(define-public gnome-icon-library
+  (package
+    (name "gnome-icon-library")
+    (version "0.0.19")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://gitlab.gnome.org/World/design/icon-library")
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "1p3h4rdx24rahj3r0krpdp377qmqp4k0nqax30i4mf70s4is9gvs"))))
+    (build-system cargo-build-system)
+    (arguments
+;; search-provider = { version = "0.8.1", features = ["gdk"] }
+
+     `(#:cargo-inputs (("rust-anyhow" ,rust-anyhow-1)
+                       ("rust-gettext-rs" ,rust-gettext-rs-0.7)
+                       ;("rust-glib" ,rust-glib-0.18)
+                       ("rust-gtk4" ,rust-gtk4-0.8)
+                       ("rust-libadwaita" ,rust-libadwaita-0.6)
+                       ;("rust-libc" ,rust-libc-0.2)
+                       ;("rust-log" ,rust-log-0.4)
+                       ("rust-serde" ,rust-serde-1)
+                       ("rust-pretty-env-logger" ,rust-pretty-env-logger-0.5)
+                       ("rust-serde-json" ,rust-serde-json-1)
+                       ("rust-sourceview5" ,rust-sourceview5-0.8))
+       #:imported-modules (,@%glib-or-gtk-build-system-modules
+                           ,@%cargo-build-system-modules)
+       #:modules ((guix build cargo-build-system)
+                  ((guix build glib-or-gtk-build-system) #:prefix glib-or-gtk:)
+                  (guix build utils))
+       #:phases
+       (modify-phases %standard-phases
+         ;; (add-before 'install 'install-extra
+           ;; (lambda* (#:key inputs outputs #:allow-other-keys)
+           ;;   (let* ((out (assoc-ref outputs "out"))
+           ;;          (source (assoc-ref inputs "source"))
+           ;;          (share (string-append out "/share"))
+           ;;          (hicolor (string-append share "/icons/hicolor")))
+           ;;     (mkdir-p hicolor)
+           ;;     (with-directory-excursion hicolor
+           ;;       (mkdir-p "scalable/apps")
+           ;;       (install-file
+           ;;        (string-append source "/data/icons/org.pipewire.Helvum.svg")
+           ;;        "scalable/apps")
+           ;;       (mkdir-p "symbolic/apps")
+           ;;       (install-file
+           ;;        (string-append
+           ;;         source "/data/icons/org.pipewire.Helvum-symbolic.svg")
+           ;;        "symbolic/apps"))
+           ;;     (with-directory-excursion share
+           ;;       (mkdir-p "applications")
+           ;;       (with-directory-excursion "applications"
+           ;;         (install-file
+           ;;          (string-append
+           ;;           source "/data/org.pipewire.Helvum.desktop.in") ".")
+           ;;         (substitute* "org.pipewire.Helvum.desktop.in"
+           ;;           (("@icon@") "org.pipewire.Helvum")
+           ;;           (("Exec=helvum")
+           ;;            (string-append "Exec="
+           ;;                           (string-append out "/bin/helvum"))))
+           ;;         (rename-file "org.pipewire.Helvum.desktop.in"
+           ;;                      "org.pipewire.Helvum.desktop"))
+           ;;       (mkdir-p "metainfo")
+           ;;       (with-directory-excursion "metainfo"
+           ;;         (install-file
+           ;;          (string-append
+           ;;           source
+           ;;           "/data/org.pipewire.Helvum.metainfo.xml.in") ".")
+           ;;         (substitute* "org.pipewire.Helvum.metainfo.xml.in"
+           ;;           (("@app-id@") "org.pipewire.Helvum"))
+           ;;         (rename-file "org.pipewire.Helvum.metainfo.xml.in"
+           ;;                      "org.pipewire.Helvum.metainfo.xml"))))))
+;; (add-after 'unpack 'skip-gtk-update-icon-cache
+;;            ;; Don't create 'icon-theme.cache'.
+;;            (lambda _
+;;              (substitute* "meson.build"
+;;                (("gtk_update_icon_cache: true")
+;;                 "gtk_update_icon_cache: false"))))
+         (add-after 'unpack 'generate-gdk-pixbuf-loaders-cache-file
+           (assoc-ref glib-or-gtk:%standard-phases
+                      'generate-gdk-pixbuf-loaders-cache-file))
+         (add-after 'install 'glib-or-gtk-compile-schemas
+           (assoc-ref glib-or-gtk:%standard-phases 'glib-or-gtk-compile-schemas))
+         (add-after 'install 'glib-or-gtk-wrap
+           (assoc-ref glib-or-gtk:%standard-phases 'glib-or-gtk-wrap)))))
+
+    (native-inputs
+     (list appstream-glib
+           blueprint-compiler
+           desktop-file-utils           ;for update-desktop-database
+           gettext-minimal
+           `(,glib "bin")               ;for glib-compile-schemas
+           pkg-config))
+    (inputs
+     (list glib
+           gsettings-desktop-schemas
+           gtk
+           gtksourceview
+           libadwaita
+           pango))
+    (home-page "https://gitlab.gnome.org/World/design/icon-library")
+    (synopsis "Symbolic icons for your apps")
+    (description
+     "GNOME Icon Library is a simple application used by GTK4 developers and
+designers to choose icons for their applications.  It supports viewing icons,
+including them in a resource file and downloading them to a source code tree.")
+    (license license:gpl3+)))
 
 (define-public folks-with-libsoup2
   (package
