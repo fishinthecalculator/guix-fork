@@ -11025,8 +11025,6 @@ compiled.")
         (base32 "1p3h4rdx24rahj3r0krpdp377qmqp4k0nqax30i4mf70s4is9gvs"))))
     (build-system cargo-build-system)
     (arguments
-;; search-provider = { version = "0.8.1", features = ["gdk"] }
-
      `(#:cargo-inputs (("rust-anyhow" ,rust-anyhow-1)
                        ("rust-gettext-rs" ,rust-gettext-rs-0.7)
                        ;("rust-glib" ,rust-glib-0.18)
@@ -11037,6 +11035,7 @@ compiled.")
                        ("rust-serde" ,rust-serde-1)
                        ("rust-pretty-env-logger" ,rust-pretty-env-logger-0.5)
                        ("rust-serde-json" ,rust-serde-json-1)
+                       ("rust-search-provider" ,rust-search-provider-0.8)
                        ("rust-sourceview5" ,rust-sourceview5-0.8))
        #:imported-modules (,@%glib-or-gtk-build-system-modules
                            ,@%cargo-build-system-modules)
