@@ -90713,17 +90713,17 @@ of help files.")
         ("rust-serde" ,rust-serde-1)
         ("rust-sha1" ,rust-sha1-0.2))))))
 
-(define-public rust-uuid-macro-internal-1
+(define-public rust-uuid-macro-internal-1.8
   (package
     (name "rust-uuid-macro-internal")
-    (version "1.6.1")
+    (version "1.8.0")
     (source (origin
               (method url-fetch)
               (uri (crate-uri "uuid-macro-internal" version))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0pl474ljbn40f08a8asy26bhdlwz4cr1k88h0w80l15q7lzpz7pl"))))
+                "18n10d9himcn2a5lwc3hw8178j6hdk1pidxkk9nf71z6rfkvx0cq"))))
     (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs
@@ -90737,6 +90737,24 @@ of help files.")
 @code{uuid!} macro.  It is not intended for direct usage.")
     ;; The user can choose either license.
     (license (list license:asl2.0 license:expat))))
+
+(define-public rust-uuid-macro-internal-1
+  (package
+    (inherit rust-uuid-macro-internal-1.8)
+    (name "rust-uuid-macro-internal")
+    (version "1.6.1")
+    (source (origin
+              (method url-fetch)
+              (uri (crate-uri "uuid-macro-internal" version))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0pl474ljbn40f08a8asy26bhdlwz4cr1k88h0w80l15q7lzpz7pl"))))
+    (arguments
+     `(#:cargo-inputs
+       (("rust-proc-macro2" ,rust-proc-macro2-1)
+        ("rust-quote" ,rust-quote-1)
+        ("rust-syn" ,rust-syn-2))))))
 
 (define-public rust-uutils-term-grid-0.6
   (package
