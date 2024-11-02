@@ -5070,8 +5070,41 @@ does.  A reference to Mutex implements AsyncRead, AsyncWrite, and
 AsyncSeek if the inner type does.")
     (license (list license:asl2.0 license:expat))))
 
+(define-public rust-async-executor-1.11
+  (package
+    (name "rust-async-executor")
+    (version "1.11.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "async-executor" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "16mj0v0ahpidhvyl739gh8dlnzp4qhi8p3ynk48kbcvq743040mi"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs
+       (("rust-async-lock" ,rust-async-lock-2)
+        ("rust-async-task" ,rust-async-task-4)
+        ("rust-concurrent-queue" ,rust-concurrent-queue-2)
+        ("rust-fastrand" ,rust-fastrand-1)
+        ("rust-futures-lite" ,rust-futures-lite-1)
+        ("rust-slab" ,rust-slab-0.4))
+       #:cargo-development-inputs
+       (("rust-async-channel" ,rust-async-channel-2)
+        ("rust-async-io" ,rust-async-io-1)
+        ("rust-criterion" ,rust-criterion-0.5)
+        ("rust-easy-parallel" ,rust-easy-parallel-3)
+        ("rust-num-cpus" ,rust-num-cpus-1)
+        ("rust-once-cell" ,rust-once-cell-1))))
+    (home-page "https://github.com/stjepang/async-executor")
+    (synopsis "Async executor")
+    (description "This library provides async executors.")
+    (license (list license:asl2.0 license:expat))))
+
 (define-public rust-async-executor-1
   (package
+    (inherit rust-async-executor-1.11)
     (name "rust-async-executor")
     (version "1.5.1")
     (source
@@ -5081,7 +5114,6 @@ AsyncSeek if the inner type does.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32 "1yrs723d4djhia5mimc85blrvly0kl8bj260b5vz0r4559gxr8vg"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs
        (("rust-async-lock" ,rust-async-lock-2)
@@ -5096,11 +5128,7 @@ AsyncSeek if the inner type does.")
         ("rust-criterion" ,rust-criterion-0.4)
         ("rust-easy-parallel" ,rust-easy-parallel-3)
         ("rust-num-cpus" ,rust-num-cpus-1)
-        ("rust-once-cell" ,rust-once-cell-1))))
-    (home-page "https://github.com/stjepang/async-executor")
-    (synopsis "Async executor")
-    (description "This library provides async executors.")
-    (license (list license:asl2.0 license:expat))))
+        ("rust-once-cell" ,rust-once-cell-1))))))
 
 (define-public rust-async-fs-2
   (package
