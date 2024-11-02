@@ -95497,8 +95497,40 @@ in Pure Rust.")
         ("rust-serde-repr" ,rust-serde-repr-0.1)
         ("rust-zvariant" ,rust-zvariant-2))))))
 
+(define-public rust-zvariant-utils-2
+  (package
+    (name "rust-zvariant-utils")
+    (version "2.1.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "zvariant_utils" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0h43h3jcw8rmjr390rdqnhkb9nn3913pgkvb75am1frxrkvwy6y5"))
+       (modules '((guix build utils)))
+       (snippet
+        '(begin
+           (substitute* "Cargo.toml"
+             ;; Patch proc-macro2 version
+             (("1\\.0\\.81") "1.0.79")
+             ;; Patch quote version
+             (("1\\.0\\.36") "1.0.35")
+             ;; Patch syn version
+             (("2\\.0\\.64") "2.0.48"))))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-proc-macro2" ,rust-proc-macro2-1)
+                       ("rust-quote" ,rust-quote-1)
+                       ("rust-syn" ,rust-syn-2))))
+    (home-page "https://github.com/dbus2/zbus/")
+    (synopsis "Utilities used internally by the zvariant crate")
+    (description "Various utilities used internally by the zvariant crate.")
+    (license license:expat)))
+
 (define-public rust-zvariant-utils-1
   (package
+    (inherit rust-zvariant-utils-2)
     (name "rust-zvariant-utils")
     (version "1.0.1")
     (source (origin
@@ -95508,16 +95540,11 @@ in Pure Rust.")
               (sha256
                (base32
                 "00625h3240rixvfhq6yhws1d4bwf3vrf74v8s69b97aq27cg0d3j"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs
        (("rust-proc-macro2" ,rust-proc-macro2-1)
         ("rust-quote" ,rust-quote-1)
-        ("rust-syn" ,rust-syn-1))))
-    (home-page "https://github.com/dbus2/zbus/")
-    (synopsis "Utilities used internally by the zvariant crate")
-    (description "Various utilities used internally by the zvariant crate.")
-    (license license:expat)))
+        ("rust-syn" ,rust-syn-1))))))
 
 ;;;
 ;;; Avoid adding new packages to the end of this file. To reduce the chances
