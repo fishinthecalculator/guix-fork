@@ -94021,17 +94021,17 @@ to XDG Base Directory specification.")
     (license (list license:asl2.0
                    license:expat))))
 
-(define-public rust-xdg-home-1
+(define-public rust-xdg-home-1.1
   (package
     (name "rust-xdg-home")
-    (version "1.0.0")
+    (version "1.1.0")
     (source
      (origin
        (method url-fetch)
        (uri (crate-uri "xdg-home" version))
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "1kbd1ks8bvpsay6lgk60yaf1w13daaf75ghmslan031ss4y20s97"))))
+        (base32 "13mkcfgngnc1fpdg5737hvhjkp95bc9w2ngqdjnri0ybqcjs7r91"))))
     (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs (("rust-nix" ,rust-nix-0.26)
@@ -94045,6 +94045,27 @@ to XDG Base Directory specification.")
     (synopsis "User home directory per XDG Specification")
     (description "The user's home directory as per the XDG Specification.")
     (license license:expat)))
+
+(define-public rust-xdg-home-1
+  (package
+    (inherit rust-xdg-home-1.1)
+    (name "rust-xdg-home")
+    (version "1.0.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "xdg-home" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1kbd1ks8bvpsay6lgk60yaf1w13daaf75ghmslan031ss4y20s97"))))
+    (arguments
+     `(#:cargo-inputs (("rust-nix" ,rust-nix-0.26)
+                       ("rust-winapi" ,rust-winapi-0.3))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'pre-check
+           (lambda _
+             (setenv "HOME" (getcwd)))))))))
 
 (define-public rust-xflags-macros-0.2
   (package
