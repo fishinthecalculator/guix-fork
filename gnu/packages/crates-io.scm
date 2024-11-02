@@ -5705,17 +5705,17 @@ implementing async state machines that can later be wrapped in dedicated
 futures.")
     (license (list license:expat license:asl2.0))))
 
-(define-public rust-async-recursion-1
+(define-public rust-async-recursion-1.1
   (package
     (name "rust-async-recursion")
-    (version "1.0.4")
-    (source (origin
-              (method url-fetch)
-              (uri (crate-uri "async-recursion" version))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1fhwz7jqgsakbjsr2nrsvgs245l1m5dkzir6f9fxw4ngwrywx5qf"))))
+    (version "1.1.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "async-recursion" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "04ac4zh8qz2xjc79lmfi4jlqj5f92xjvfaqvbzwkizyqd4pl4hrv"))))
     (build-system cargo-build-system)
     (arguments
      `(#:tests? #f      ; TODO: Tests unexpectedly pass.
@@ -5725,11 +5725,34 @@ futures.")
         ("rust-syn" ,rust-syn-2))
        #:cargo-development-inputs
        (("rust-futures-executor" ,rust-futures-executor-0.3)
+        ("rust-macrotest" ,rust-macrotest-1)
         ("rust-trybuild" ,rust-trybuild-1))))
     (home-page "https://github.com/dcchut/async-recursion")
     (synopsis "Recursion for async functions")
-    (description "This package provides recursion for async functions in Rust.")
+    (description "This package provides Recursion for async functions.")
     (license (list license:expat license:asl2.0))))
+
+(define-public rust-async-recursion-1
+  (package
+    (inherit rust-async-recursion-1.1)
+    (name "rust-async-recursion")
+    (version "1.0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (crate-uri "async-recursion" version))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1fhwz7jqgsakbjsr2nrsvgs245l1m5dkzir6f9fxw4ngwrywx5qf"))))
+    (arguments
+     `(#:tests? #f      ; TODO: Tests unexpectedly pass.
+       #:cargo-inputs
+       (("rust-proc-macro2" ,rust-proc-macro2-1)
+        ("rust-quote" ,rust-quote-1)
+        ("rust-syn" ,rust-syn-2))
+       #:cargo-development-inputs
+       (("rust-futures-executor" ,rust-futures-executor-0.3)
+        ("rust-trybuild" ,rust-trybuild-1))))))
 
 (define-public rust-async-session-3
   (package
