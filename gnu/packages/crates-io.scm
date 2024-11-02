@@ -90586,8 +90586,53 @@ first byte.")
 of help files.")
     (license license:expat)))
 
+(define-public rust-uuid-1.8
+  (package
+    (name "rust-uuid")
+    (version "1.8.0")
+    (source (origin
+              (method url-fetch)
+              (uri (crate-uri "uuid" version))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1h7wks153j08xmdk06wnza3is8pn6j37hihd3kfv95xsxrzwz0x1"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs
+       (("rust-arbitrary" ,rust-arbitrary-1)
+        ("rust-atomic" ,rust-atomic-0.5)
+        ("rust-borsh" ,rust-borsh-0.10)
+        ("rust-bytemuck" ,rust-bytemuck-1)
+        ("rust-getrandom" ,rust-getrandom-0.2)
+        ("rust-md-5" ,rust-md-5-0.10)
+        ("rust-rand" ,rust-rand-0.8)
+        ("rust-serde" ,rust-serde-1)
+        ("rust-sha1-smol" ,rust-sha1-smol-1)
+        ("rust-slog" ,rust-slog-2)
+        ("rust-uuid-macro-internal" ,rust-uuid-macro-internal-1.8)
+        ("rust-wasm-bindgen" ,rust-wasm-bindgen-0.2)
+        ("rust-zerocopy" ,rust-zerocopy-0.6))
+       #:cargo-development-inputs
+       (("rust-bincode" ,rust-bincode-1)
+        ("rust-rustversion" ,rust-rustversion-1)
+        ("rust-serde-derive" ,rust-serde-derive-1)
+        ("rust-serde-json" ,rust-serde-json-1)
+        ("rust-serde-test" ,rust-serde-test-1)
+        ("rust-trybuild" ,rust-trybuild-1)
+        ("rust-wasm-bindgen" ,rust-wasm-bindgen-0.2)
+        ("rust-wasm-bindgen-test" ,rust-wasm-bindgen-test-0.3)
+        ("rust-windows-sys" ,rust-windows-sys-0.48))))
+    (home-page "https://github.com/uuid-rs/uuid")
+    (synopsis "Library to generate and parse UUIDs")
+    (description
+     "This package provides a library to generate and parse UUIDs.")
+    ;; The user can choose either license.
+    (license (list license:asl2.0 license:expat))))
+
 (define-public rust-uuid-1
   (package
+    (inherit rust-uuid-1.8)
     (name "rust-uuid")
     (version "1.6.1")
     (source (origin
@@ -90597,7 +90642,6 @@ of help files.")
               (sha256
                (base32
                 "0q45jxahvysldn3iy04m8xmr8hgig80855y9gq9di8x72v7myfay"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs
        (("rust-arbitrary" ,rust-arbitrary-1)
@@ -90624,11 +90668,7 @@ of help files.")
         ("rust-wasm-bindgen-test" ,rust-wasm-bindgen-test-0.3)
         ("rust-windows-sys" ,rust-windows-sys-0.48))))
     (home-page "https://github.com/uuid-rs/uuid")
-    (synopsis "Library to generate and parse UUIDs")
-    (description
-     "This package provides a library to generate and parse UUIDs.")
-    ;; The user can choose either license.
-    (license (list license:asl2.0 license:expat))))
+    (synopsis "Library to generate and parse UUIDs")))
 
 (define-public rust-uuid-0.8
   (package
