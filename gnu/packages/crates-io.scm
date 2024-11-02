@@ -95497,8 +95497,52 @@ in Pure Rust.")
         ("rust-serde-json" ,rust-serde-json-1)
         ("rust-serde-repr" ,rust-serde-repr-0.1))))))
 
+(define-public rust-zvariant-derive-4
+  (package
+    (name "rust-zvariant-derive")
+    (version "4.2.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "zvariant_derive" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0jf408h0s83krxwm7wl62fnssin1kcklmb1bcn83ls6sddabmqkk"))
+       (modules '((guix build utils)))
+       (snippet
+        '(begin
+           (substitute* "Cargo.toml"
+             ;; Patch proc-macro2 version
+             (("1\\.0\\.81") "1.0.79")
+             ;; Patch quote version
+             (("1\\.0\\.36") "1.0.35")
+             ;; Patch syn version
+             (("2\\.0\\.64") "2.0.48")
+             ;; Patch enumflags2 version
+             (("0\\.7\\.9") "0.7.7")
+             ;; Patch serde_repr version
+             (("0\\.1\\.19") "0.1.18"))))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:tests? #f      ; Needs unstable features.
+       #:cargo-inputs (("rust-proc-macro-crate" ,rust-proc-macro-crate-3)
+                       ("rust-proc-macro2" ,rust-proc-macro2-1)
+                       ("rust-quote" ,rust-quote-1)
+                       ("rust-syn" ,rust-syn-2)
+                       ("rust-zvariant-utils" ,rust-zvariant-utils-2))
+       #:cargo-development-inputs
+       (("rust-byteorder" ,rust-byteorder-1)
+        ("rust-enumflags2" ,rust-enumflags2-0.7)
+        ("rust-serde" ,rust-serde-1)
+        ("rust-serde-repr" ,rust-serde-repr-0.1))))
+    (home-page "https://github.com/dbus2/zbus/")
+    (synopsis "D-Bus & GVariant encoding & decoding")
+    (description "D-Bus & GVariant encoding & decoding")
+    (license license:expat)))
+
 (define-public rust-zvariant-derive-3
   (package
+    (inherit rust-zvariant-derive-4)
     (name "rust-zvariant-derive")
     (version "3.15.0")
     (source (origin
@@ -95508,7 +95552,6 @@ in Pure Rust.")
               (sha256
                (base32
                 "1kcfgpqshggr5v7dwldjggix79zcyj7fizw7dkh6w39iziyplkck"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:tests? #f      ; Needs unstable features.
        #:cargo-inputs
@@ -95521,11 +95564,7 @@ in Pure Rust.")
        (("rust-byteorder" ,rust-byteorder-1)
         ("rust-enumflags2" ,rust-enumflags2-0.7)
         ("rust-serde" ,rust-serde-1)
-        ("rust-serde-repr" ,rust-serde-repr-0.1))))
-    (home-page "https://github.com/dbus2/zbus/")
-    (synopsis "D-Bus & GVariant encoding & decoding")
-    (description "D-Bus & GVariant encoding & decoding")
-    (license license:expat)))
+        ("rust-serde-repr" ,rust-serde-repr-0.1))))))
 
 (define-public rust-zvariant-derive-2
   (package
