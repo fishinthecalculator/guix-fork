@@ -5902,8 +5902,37 @@ notation.")
 crate.")
     (license license:expat)))
 
+(define-public rust-async-task-4.7
+  (package
+    (name "rust-async-task")
+    (version "4.7.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "async-task" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1pp3avr4ri2nbh7s6y9ws0397nkx1zymmcr14sq761ljarh3axcb"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-portable-atomic" ,rust-portable-atomic-1))
+       #:cargo-development-inputs
+       (("rust-atomic-waker" ,rust-atomic-waker-1)
+        ("rust-easy-parallel" ,rust-easy-parallel-3)
+        ("rust-flaky-test" ,rust-flaky-test-0.2)
+        ("rust-flume" ,rust-flume-0.11)
+        ("rust-futures-lite" ,rust-futures-lite-1)
+        ("rust-once-cell" ,rust-once-cell-1)
+        ("rust-smol" ,rust-smol-2))))
+    (home-page "https://github.com/stjepang/async-task")
+    (synopsis "Task abstraction for building executors")
+    (description
+     "This package provides a task abstraction for building executors.")
+    (license (list license:asl2.0 license:expat))))
+
 (define-public rust-async-task-4
   (package
+    (inherit rust-async-task-4.7)
     (name "rust-async-task")
     (version "4.4.0")
     (source
@@ -5913,7 +5942,6 @@ crate.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32 "1bis5aqnjw3gxridzpq2cwrlj4y8alrfqy19rly6ag2vh50spizc"))))
-    (build-system cargo-build-system)
     (arguments
      `(#:cargo-development-inputs
        (("rust-atomic-waker" ,rust-atomic-waker-1)
@@ -5922,12 +5950,7 @@ crate.")
         ("rust-flume" ,rust-flume-0.10)
         ("rust-futures-lite" ,rust-futures-lite-1)
         ("rust-once-cell" ,rust-once-cell-1)
-        ("rust-smol" ,rust-smol-1))))
-    (home-page "https://github.com/stjepang/async-task")
-    (synopsis "Task abstraction for building executors")
-    (description
-     "This package provides a task abstraction for building executors.")
-    (license (list license:asl2.0 license:expat))))
+        ("rust-smol" ,rust-smol-1))))))
 
 (define-public rust-async-task-3
   (package
