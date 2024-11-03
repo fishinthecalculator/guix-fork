@@ -32,6 +32,7 @@
 ;;; Copyright © 2024 Tomas Volf <~@wolfsden.cz>
 ;;; Copyright © 2024 Suhail Singh <suhail@bayesians.ca>
 ;;; Copyright © 2024 Jordan Moore <lockbox@struct.foo>
+;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -61,6 +62,7 @@
   #:use-module (guix utils)
   #:use-module (gnu packages)
   #:use-module (gnu packages admin)
+  #:use-module (gnu packages aidc)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
@@ -80,8 +82,10 @@
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages freedesktop)
   #:use-module (gnu packages haskell-xyz)
+  #:use-module (gnu packages gettext)
   #:use-module (gnu packages glib)
   #:use-module (gnu packages gnome)
+  #:use-module (gnu packages gstreamer)
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages ibus)
   #:use-module (gnu packages icu4c)
@@ -106,6 +110,7 @@
   #:use-module (gnu packages tls)
   #:use-module (gnu packages version-control)
   #:use-module (gnu packages webkit)
+  #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg))
 
 (define-public aardvark-dns
@@ -984,6 +989,236 @@ defaults for 80% of the use cases.")
     (synopsis "Terminal UI for git")
     (description "This package provides a fast Terminal UI for git.")
     (license license:expat)))
+
+(define-public gnome-authenticator
+  (package
+    (name "gnome-authenticator")
+    (version "4.4.0")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://gitlab.gnome.org/World/Authenticator.git/")
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "0zavax35n048spx097ymiq31s8b879qwbg8xmcxcx73r6m823mic"))))
+    (build-system cargo-build-system)
+    (arguments
+     (list
+      #:install-source? #f
+      #:cargo-inputs `(("rust-aes-gcm" ,rust-aes-gcm-0.10)
+                       ("rust-anyhow" ,rust-anyhow-1)
+                       ("rust-rust-argon2" ,rust-rust-argon2-2.0)
+                       ("rust-aperture" ,rust-aperture-0.3)
+                       ("rust-ashpd" ,rust-ashpd-0.6)
+                       ("rust-data-encoding" ,rust-data-encoding-2)
+                       ("rust-diesel" ,rust-diesel-2)
+                       ("rust-diesel-migrations" ,rust-diesel-migrations-2)
+                       ("rust-futures-channel" ,rust-futures-channel-0.3)
+                       ("rust-futures-executor" ,rust-futures-executor-0.3)
+                       ("rust-futures-util" ,rust-futures-util-0.3)
+                       ("rust-gettext-rs" ,rust-gettext-rs-0.7)
+                       ("rust-gtk4" ,rust-gtk4-0.7)
+                       ("rust-hex" ,rust-hex-0.4)
+                       ("rust-image" ,rust-image-0.24)
+                       ("rust-libadwaita" ,rust-libadwaita-0.5)
+                       ("rust-oo7" ,rust-oo7-0.2)
+                       ("rust-percent-encoding" ,rust-percent-encoding-2.1)
+                       ("rust-prost" ,rust-prost-0.12)
+                       ("rust-qrencode" ,rust-qrencode-0.14)
+                       ("rust-rand" ,rust-rand-0.8)
+                       ("rust-reqwest" ,rust-reqwest-0.11)
+                       ("rust-ring" ,rust-ring-0.17)
+                       ("rust-scrypt" ,rust-scrypt-0.11)
+                       ("rust-search-provider" ,rust-search-provider-0.6)
+                       ("rust-serde" ,rust-serde-1)
+                       ("rust-serde-json" ,rust-serde-json-1)
+                       ("rust-svg-metadata" ,rust-svg-metadata-0.4)
+                       ("rust-tokio" ,rust-tokio-1)
+                       ("rust-tracing" ,rust-tracing-0.1)
+                       ("rust-tracing-subscriber" ,rust-tracing-subscriber-0.3)
+                       ("rust-url" ,rust-url-2)
+                       ("rust-uuid" ,rust-uuid-1)
+                       ("rust-zbar-rust" ,rust-zbar-rust-0.0)
+                       ("rust-zeroize" ,rust-zeroize-1))
+      #:imported-modules `(,@%glib-or-gtk-build-system-modules
+                           ,@%cargo-build-system-modules)
+      #:modules `((guix build cargo-build-system)
+                  ((guix build glib-or-gtk-build-system) #:prefix glib-or-gtk:)
+                  (guix build utils))
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'unpack 'patch-in-files
+            (lambda _
+              (let ((bindir
+                     (string-append #$output "/bin"))
+                    (localedir
+                     (string-append "\"" #$output "share/locale\""))
+                    (pkgdatadir
+                     (string-append "\"" #$output "/share/authenticator\"")))
+
+                (substitute* "src/config.rs.in"
+                  (("@APP_ID@") "\"com.belmoussaoui.Authenticator\"")
+                  (("@PKGDATADIR@") pkgdatadir)
+                  (("@PROFILE@") "\"\"")
+                  (("@VERSION@") (string-append "\"" #$version "\""))
+                  (("@GETTEXT_PACKAGE@") "\"authenticator\"")
+                  (("@LOCALEDIR@") localedir)
+                  (("@OBJECT_PATH@") "\"/com/belmoussaoui/Authenticator/SearchProvider\""))
+                (rename-file "src/config.rs.in" "src/config.rs")
+
+                (substitute* "data/com.belmoussaoui.Authenticator.SearchProvider.service.in"
+                  (("@app-id@") "com.belmoussaoui.Authenticator")
+                  (("@bindir@") bindir)
+                  (("@name@") "authenticator"))
+                (rename-file "data/com.belmoussaoui.Authenticator.SearchProvider.service.in"
+                             "data/com.belmoussaoui.Authenticator.SearchProvider.service")
+
+                (substitute* "data/com.belmoussaoui.Authenticator.metainfo.xml.in.in"
+                  (("@app-id@") "com.belmoussaoui.Authenticator")
+                  (("@gettext-package@") "authenticator"))
+                (rename-file "data/com.belmoussaoui.Authenticator.metainfo.xml.in.in"
+                             "data/com.belmoussaoui.Authenticator.metainfo.xml")
+
+                (substitute* "data/com.belmoussaoui.Authenticator.desktop.in.in"
+                  (("@icon@") "com.belmoussaoui.Authenticator"))
+                (rename-file "data/com.belmoussaoui.Authenticator.desktop.in.in"
+                             "data/com.belmoussaoui.Authenticator.desktop")
+
+                (substitute* "data/com.belmoussaoui.Authenticator.gschema.xml.in"
+                  (("@app-id@") "com.belmoussaoui.Authenticator")
+                  (("@gettext-package@") "authenticator"))
+                (rename-file "data/com.belmoussaoui.Authenticator.gschema.xml.in"
+                             "data/com.belmoussaoui.Authenticator.gschema.xml"))))
+          (add-before 'build 'build-locales
+            (lambda _
+              (for-each
+               (lambda (po-file)
+                 (invoke "msgfmt" "-c" "-o"
+                         (string-append (string-drop-right po-file 3) ".mo")
+                         po-file))
+               (find-files "po" "\\.po"))))
+          (add-before 'build-locales 'build-resources
+            (lambda _
+              (with-directory-excursion "data"
+                (invoke "glib-compile-resources"
+                        "--generate"
+                        "resources.gresource.xml"))))
+          (add-before 'install 'install-extra
+            (lambda* (#:key inputs outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (here (getcwd))
+                     (source (assoc-ref inputs "source"))
+                     (share (string-append out "/share"))
+                     (hicolor (string-append share "/icons/hicolor")))
+                (mkdir-p hicolor)
+                (with-directory-excursion hicolor
+                  (mkdir-p "scalable/apps")
+                  (install-file
+                   (string-append source "/data/icons/com.belmoussaoui.Authenticator.svg")
+                   "scalable/apps")
+                  (mkdir-p "symbolic/apps")
+                  (install-file
+                   (string-append
+                    source "/data/icons/com.belmoussaoui.Authenticator-symbolic.svg")
+                   "symbolic/apps"))
+                (with-directory-excursion share
+                  (mkdir-p "applications")
+                  (with-directory-excursion "applications"
+                    (install-file
+                     (string-append
+                      here "/data/com.belmoussaoui.Authenticator.desktop") "."))
+                  (mkdir-p "authenticator")
+                  (with-directory-excursion "authenticator"
+                    (copy-file
+                     (string-append
+                      here "/data/resources.gresource")
+                     "authenticator.gresource"))
+                  (mkdir-p "gnome-shell/search-providers")
+                  (with-directory-excursion "gnome-shell/search-providers"
+                    (install-file
+                     (string-append
+                      here
+                      "/data/com.belmoussaoui.Authenticator.search-provider.ini") "."))
+                  (mkdir-p "locale")
+                  (with-directory-excursion "locale"
+                    (for-each
+                     (lambda (mo-file)
+                       (define mo-dir
+                         (string-append
+                          (string-drop-right (basename mo-file) 3)
+                          "/LC_MESSAGES"))
+                       (mkdir-p mo-dir)
+                       (copy-file mo-file (string-append mo-dir "/authenticator.mo")))
+                     (find-files (string-append here "/po") "\\.mo")))
+                  (mkdir-p "metainfo")
+                  (with-directory-excursion "metainfo"
+                    (install-file
+                     (string-append
+                      here
+                      "/data/com.belmoussaoui.Authenticator.metainfo.xml") "."))
+                  (mkdir-p "glib-2.0/schemas")
+                  (with-directory-excursion "glib-2.0/schemas"
+                    (install-file
+                     (string-append
+                      here
+                      "/data/com.belmoussaoui.Authenticator.gschema.xml") "."))
+                  (mkdir-p "dbus-1/services")
+                  (with-directory-excursion "dbus-1/services"
+                    (install-file
+                     (string-append
+                      here
+                      "/data/com.belmoussaoui.Authenticator.SearchProvider.service") "."))))))
+          (add-after 'unpack 'generate-gdk-pixbuf-loaders-cache-file
+            (assoc-ref glib-or-gtk:%standard-phases
+                       'generate-gdk-pixbuf-loaders-cache-file))
+          (add-after 'install 'glib-or-gtk-compile-schemas
+            (assoc-ref glib-or-gtk:%standard-phases 'glib-or-gtk-compile-schemas))
+          (add-after 'install 'glib-or-gtk-wrap
+            (assoc-ref glib-or-gtk:%standard-phases 'glib-or-gtk-wrap))
+          (add-after 'glib-or-gtk-wrap 'wrap-extra-paths
+            (lambda* (#:key outputs #:allow-other-keys)
+              (let ((out (assoc-ref outputs "out"))
+                    (gst-plugins-path (getenv "GST_PLUGIN_SYSTEM_PATH")))
+                (for-each
+                 (lambda (prog)
+                   (wrap-program (string-append out "/bin/" prog)
+                     `("GST_PLUGIN_SYSTEM_PATH" ":" suffix (,gst-plugins-path))))
+                 '("authenticator"))))))))
+    (native-inputs (list clang
+                         gnu-gettext
+                         `(,glib "bin") ; for glib-compile-schemas
+                         libxml2        ; for xmllint
+                         pkg-config))
+    (inputs (list glib
+                  gstreamer
+                  gst-plugins-base
+                  gst-plugins-bad
+                  gtk
+                  libadwaita
+                  openssl
+                  pango-1.51
+                  sqlite
+                  zbar))
+    (home-page "https://apps.gnome.org/Authenticator")
+    (synopsis "Generate two-factor codes")
+    (description "Simple application for generating Two-Factor Authentication
+Codes:
+
+It features:
+
+@itemize
+@item Time-based/Counter-based/Steam methods support
+@item SHA-1/SHA-256/SHA-512 algorithms support
+@item QR code scanner using a camera or from a screenshot
+@item Lock the application with a password
+@item Beautiful UI
+@item GNOME Shell search provider
+@item Backup/Restore from/into known applications like FreeOTP+,
+Aegis (encrypted / plain-text), andOTP, Google Authenticator
+@end itemize")
+    (license license:gpl3)))
 
 (define-public helvum
   (package
