@@ -42,6 +42,36 @@
 ;;;
 ;;; Please: Try to add new module packages in alphabetic order.
 ;;;
+
+(define-public rust-aperture-0.3
+  (package
+    (name "rust-aperture")
+    (version "0.3.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "aperture" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "02bjzskxp91br91yvf5f32wakp1i9948sxbsy9hdrxs52w38hr61"))))
+    (build-system cargo-build-system)
+    (arguments
+     (list #:cargo-inputs `(("rust-gst-plugin-gtk4" ,rust-gst-plugin-gtk4-0.11)
+                            ("rust-gstreamer" ,rust-gstreamer-0.21)
+                            ("rust-gstreamer-pbutils" ,rust-gstreamer-pbutils-0.21)
+                            ("rust-gstreamer-video" ,rust-gstreamer-video-0.21)
+                            ("rust-gtk4" ,rust-gtk4-0.7)
+                            ("rust-log" ,rust-log-0.4)
+                            ("rust-pkg-config" ,rust-pkg-config-0.3))))
+    (native-inputs (list pkg-config))
+    (inputs (list gdk-pixbuf glib graphene gstreamer gst-plugins-base
+                  gst-plugins-bad gtk pango-1.51))
+    (home-page "https://gitlab.gnome.org/GNOME/snapshot")
+    (synopsis "GTK Widget for cameras using gstreamer and pipewire")
+    (description
+     "This package provides GTK Widget for cameras using gstreamer and pipewire.")
+    (license license:gpl3+)))
+
 (define-public rust-atk-sys-0.14
   (package
     (name "rust-atk-sys")
