@@ -442,6 +442,19 @@ handling for GTK+-2.x.")
     (home-page "https://pango.gnome.org/")
     (license license:lgpl2.0+)))
 
+(define-public pango-1.51
+  (package
+   (inherit pango)
+   (version "1.51.2")
+   (source (origin
+             (method url-fetch)
+             (uri (string-append "mirror://gnome/sources/pango/"
+                                 (version-major+minor version) "/"
+                                 "pango-" version ".tar.xz"))
+             (sha256
+              (base32
+               "0nj174hk95rbidbiqjwkkgyw3vf83h55y0pkjbhighaz5dzl1fix"))))))
+
 (define-public pango-1.42
   (package
    (inherit pango)
