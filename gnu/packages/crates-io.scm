@@ -44127,10 +44127,10 @@ migration mechanism.")
        #:cargo-development-inputs
        (("rust-tempdir" ,rust-tempdir-0.3))))))
 
-(define-public rust-migrations-macros-1
+(define-public rust-migrations-macros-2
   (package
     (name "rust-migrations-macros")
-    (version "1.4.2")
+    (version "2.1.0")
     (source
      (origin
        (method url-fetch)
@@ -44138,12 +44138,15 @@ migration mechanism.")
        (file-name
         (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "173qgwans6n2jf6b7qajq273rvg1r9c34p5fflzr53gx14lz2lwp"))))
+        (base32 "027gd4s58fmh7jil9rz0ckdsdw81mqfa6dyqbfmvnrqfqxd35qyc"))))
     (build-system cargo-build-system)
     (arguments
-     `(#:cargo-inputs
-       (("rust-migrations-internals"
-         ,rust-migrations-internals-1)
+     ;; Some files are missing
+     `(#:tests? #f
+       #:cargo-inputs
+       (("rust-dotenvy" ,rust-dotenvy-0.15)
+        ("rust-migrations-internals"
+         ,rust-migrations-internals-2)
         ("rust-proc-macro2" ,rust-proc-macro2-1)
         ("rust-quote" ,rust-quote-1)
         ("rust-syn" ,rust-syn-1))
@@ -44158,6 +44161,29 @@ migration mechanism.")
     (description "This package provides code generation macros for Diesel's
 embedded migrations.")
     (license (list license:expat license:asl2.0))))
+
+(define-public rust-migrations-macros-1
+  (package
+    (inherit rust-migrations-macros-2)
+    (name "rust-migrations-macros")
+    (version "1.4.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "migrations_macros" version))
+       (file-name
+        (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "173qgwans6n2jf6b7qajq273rvg1r9c34p5fflzr53gx14lz2lwp"))))
+    (arguments
+     `(#:cargo-inputs
+       (("rust-migrations-internals"
+         ,rust-migrations-internals-1)
+        ("rust-proc-macro2" ,rust-proc-macro2-1)
+        ("rust-quote" ,rust-quote-1)
+        ("rust-syn" ,rust-syn-1))
+       #:cargo-development-inputs
+       (("rust-tempdir" ,rust-tempdir-0.3))))))
 
 (define-public rust-mimalloc-0.1
   (package
