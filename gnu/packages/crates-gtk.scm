@@ -72,6 +72,50 @@
      "This package provides GTK Widget for cameras using gstreamer and pipewire.")
     (license license:gpl3+)))
 
+(define-public rust-ashpd-0.6
+  (package
+    (name "rust-ashpd")
+    (version "0.6.8")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "ashpd" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "109d7w6v0rnpy9lv4kmhwgh0sff0440s2vybj1k0ik4ib3d2xhja"))))
+    (build-system cargo-build-system)
+    (arguments
+     ;; error[E0432]: unresolved import `ashpd::desktop::Color`
+     `(#:tests? #f
+       #:cargo-inputs (("rust-async-fs" ,rust-async-fs-2)
+                       ("rust-async-net" ,rust-async-net-2)
+                       ("rust-async-trait" ,rust-async-trait-0.1)
+                       ("rust-enumflags2" ,rust-enumflags2-0.7)
+                       ("rust-futures-channel" ,rust-futures-channel-0.3)
+                       ("rust-futures-util" ,rust-futures-util-0.3)
+                       ("rust-gdk4-wayland" ,rust-gdk4-wayland-0.7)
+                       ("rust-gdk4-x11" ,rust-gdk4-x11-0.7)
+                       ("rust-glib" ,rust-glib-0.18)
+                       ("rust-gtk4" ,rust-gtk4-0.7)
+                       ("rust-pipewire" ,rust-pipewire-0.7)
+                       ("rust-rand" ,rust-rand-0.8)
+                       ("rust-raw-window-handle" ,rust-raw-window-handle-0.6)
+                       ("rust-serde" ,rust-serde-1)
+                       ("rust-serde-repr" ,rust-serde-repr-0.1)
+                       ("rust-tokio" ,rust-tokio-1)
+                       ("rust-tracing" ,rust-tracing-0.1)
+                       ("rust-url" ,rust-url-2)
+                       ("rust-wayland-backend" ,rust-wayland-backend-0.3)
+                       ("rust-wayland-client" ,rust-wayland-client-0.30)
+                       ("rust-wayland-protocols" ,rust-wayland-protocols-0.30)
+                       ("rust-zbus" ,rust-zbus-3))
+       #:cargo-development-inputs (("rust-serde-json" ,rust-serde-json-1))))
+    (home-page "https://github.com/bilelmoussaoui/ashpd")
+    (synopsis "XDG portals wrapper in Rust using zbus")
+    (description
+     "This package provides XDG portals wrapper in Rust using zbus.")
+    (license license:expat)))
+
 (define-public rust-atk-sys-0.14
   (package
     (name "rust-atk-sys")
