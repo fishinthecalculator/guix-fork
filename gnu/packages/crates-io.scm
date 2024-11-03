@@ -44082,10 +44082,10 @@ quality, high performance hash algorithm.")
                        ("rust-quote" ,rust-quote-1)
                        ("rust-syn" ,rust-syn-2))))))
 
-(define-public rust-migrations-internals-1
+(define-public rust-migrations-internals-2
   (package
     (name "rust-migrations-internals")
-    (version "1.4.1")
+    (version "2.1.0")
     (source
      (origin
        (method url-fetch)
@@ -44093,7 +44093,7 @@ quality, high performance hash algorithm.")
        (file-name
         (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "0q2qk4jpa16mcfcmhjz6hdg2s73az1k7j0cy08vvh87h997chkrb"))))
+        (base32 "1nnsr5d4h2kcvmz2j4l8g8n8r1zm7nngwmp842q58lh1h0azf8qg"))))
     (build-system cargo-build-system)
     (arguments
      `(#:cargo-inputs
@@ -44106,6 +44106,26 @@ quality, high performance hash algorithm.")
     (description "This package provides an internal implementation of Diesel's
 migration mechanism.")
     (license (list license:expat license:asl2.0))))
+
+(define-public rust-migrations-internals-1
+  (package
+    (inherit rust-migrations-internals-2)
+    (name "rust-migrations-internals")
+    (version "1.4.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "migrations_internals" version))
+       (file-name
+        (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0q2qk4jpa16mcfcmhjz6hdg2s73az1k7j0cy08vvh87h997chkrb"))))
+    (arguments
+     `(#:cargo-inputs
+       (("rust-barrel" ,rust-barrel-0.6)
+        ("rust-diesel" ,rust-diesel-1))
+       #:cargo-development-inputs
+       (("rust-tempdir" ,rust-tempdir-0.3))))))
 
 (define-public rust-migrations-macros-1
   (package
