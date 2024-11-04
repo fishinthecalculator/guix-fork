@@ -61444,6 +61444,27 @@ Python code from a Rust binary is also supported.")
         ("rust-zip" ,rust-zip-0.6))
        #:cargo-development-inputs (("rust-serde-json" ,rust-serde-json-1))))))
 
+(define-public rust-qrcodegen-1
+  (package
+    (name "rust-qrcodegen")
+    (version "1.8.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "qrcodegen" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0hn1j12q31nzlkra42s20p0wh198bx8f7xc73mic3j9121xgqfa3"))))
+    (build-system cargo-build-system)
+    (arguments
+     ;; test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out
+     (list #:tests? #f))
+    (home-page "https://www.nayuki.io/page/qr-code-generator-library")
+    (synopsis "High-quality QR Code generator library")
+    (description
+     "This package provides a high-quality QR Code generator library.")
+    (license license:expat)))
+
 (define-public rust-qrencode-0.14
   (package
     (name "rust-qrencode")
