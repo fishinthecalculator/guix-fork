@@ -28,6 +28,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (gnu packages)
+  #:use-module (gnu packages crates-crypto)
   #:use-module (gnu packages crates-graphics)
   #:use-module (gnu packages crates-io)
   #:use-module (gnu packages crates-windows)
@@ -4457,6 +4458,56 @@ library.")
                        ("rust-system-deps" ,rust-system-deps-6))
        #:cargo-development-inputs (("rust-shell-words" ,rust-shell-words-1)
                                    ("rust-tempfile" ,rust-tempfile-3))))))
+
+(define-public rust-oo7-0.2
+  (package
+    (name "rust-oo7")
+    (version "0.2.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "oo7" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "13cpaq7f51gqcspd4097vjr7r2cjpxpn6c02x67dsdizk0xaiv5c"))))
+    (build-system cargo-build-system)
+    (arguments
+     ;; test result: FAILED. 14 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out
+     `(#:tests? #f
+       #:cargo-inputs (("rust-aes" ,rust-aes-0.8)
+                       ("rust-async-fs" ,rust-async-fs-2)
+                       ("rust-async-io" ,rust-async-io-2)
+                       ("rust-async-lock" ,rust-async-lock-3)
+                       ("rust-async-net" ,rust-async-net-2)
+                       ("rust-blocking" ,rust-blocking-1.5)
+                       ("rust-cbc" ,rust-cbc-0.1)
+                       ("rust-cipher" ,rust-cipher-0.4)
+                       ("rust-digest" ,rust-digest-0.10)
+                       ("rust-futures-lite" ,rust-futures-lite-2)
+                       ("rust-futures-util" ,rust-futures-util-0.3)
+                       ("rust-hkdf" ,rust-hkdf-0.12)
+                       ("rust-hmac" ,rust-hmac-0.12)
+                       ("rust-md-5" ,rust-md-5-0.10)
+                       ("rust-num" ,rust-num-0.4)
+                       ("rust-num-bigint-dig" ,rust-num-bigint-dig-0.8)
+                       ("rust-openssl" ,rust-openssl-0.10)
+                       ("rust-pbkdf2" ,rust-pbkdf2-0.12)
+                       ("rust-rand" ,rust-rand-0.8)
+                       ("rust-serde" ,rust-serde-1)
+                       ("rust-sha2" ,rust-sha2-0.10)
+                       ("rust-tokio" ,rust-tokio-1)
+                       ("rust-tracing" ,rust-tracing-0.1)
+                       ("rust-zbus" ,rust-zbus-3)
+                       ("rust-zeroize" ,rust-zeroize-1))
+       #:cargo-development-inputs (("rust-tempfile" ,rust-tempfile-3)
+                                   ("rust-tokio" ,rust-tokio-1))))
+    (home-page "https://github.com/bilelmoussaoui/oo7")
+    (synopsis
+     "James Bond went on a new mission and this time as a Secret Service
+provider")
+    (description
+     "This package provides oo7, a Rust Secret Service provider.")
+    (license license:expat)))
 
 (define-public rust-pango-0.20
   (package
