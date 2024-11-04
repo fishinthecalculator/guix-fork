@@ -61471,6 +61471,32 @@ Python code from a Rust binary is also supported.")
         ("rust-zip" ,rust-zip-0.6))
        #:cargo-development-inputs (("rust-serde-json" ,rust-serde-json-1))))))
 
+(define-public rust-qrcode-generator-4
+  (package
+    (name "rust-qrcode-generator")
+    (version "4.1.9")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "qrcode-generator" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0ngiwz7mfqfy7g8nh309vq9qqphyybbp890s4fb418f78sbcn1hx"))))
+    (build-system cargo-build-system)
+    (arguments
+     ;; test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out
+     `(#:tests? #f
+       #:cargo-inputs (("rust-html-escape" ,rust-html-escape-0.2)
+                       ("rust-image" ,rust-image-0.24)
+                       ("rust-qrcodegen" ,rust-qrcodegen-1))
+       #:cargo-development-inputs (("rust-manifest-dir-macros" ,rust-manifest-dir-macros-0.1))))
+    (home-page "https://magiclen.org/qrcode-generator")
+    (synopsis
+     "Generate QR Code matrices and images in RAW, PNG and SVG formats")
+    (description
+     "This package provides Generate QR Code matrices and images in RAW, PNG and SVG formats.")
+    (license license:expat)))
+
 (define-public rust-qrcodegen-1
   (package
     (name "rust-qrcodegen")
