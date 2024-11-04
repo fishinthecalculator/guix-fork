@@ -24910,6 +24910,28 @@ obtain the ordinal values of their variants but also allows for the
 construction of enums from an ordinal value.")
     (license license:expat)))
 
+(define-public rust-enum-ordinalize-4
+  (package
+    (name "rust-enum-ordinalize")
+    (version "4.2.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "enum-ordinalize" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0ydbzycxl0kais26lrk6i0riylw1ci4s065pky73vfvrnglbn9k9"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-enum-ordinalize-derive" ,rust-enum-ordinalize-derive-4))))
+    (home-page "https://magiclen.org/enum-ordinalize")
+    (synopsis
+     "Construction of enums from an ordinal value")
+    (description
+     "This library enables enums to not only obtain the ordinal values of their
+variants but also allows for the construction of enums from an ordinal value.")
+    (license license:expat)))
+
 (define-public rust-enumset-1
   (package
     (name "rust-enumset")
