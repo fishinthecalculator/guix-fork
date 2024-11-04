@@ -65848,9 +65848,30 @@ can handle huge texts and memory-incoherent edits with ease.")
        (sha256
         (base32 "0zs0q8hg5nnh91s1ib6r0fky7xm8ay63ayfa5i1afxxpwgalzl9w"))))))
 
-(define-public rust-roxmltree-0.14
+(define-public rust-roxmltree-0.18
   (package
     (inherit rust-roxmltree-0.19)
+    (name "rust-roxmltree")
+    (version "0.18.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "roxmltree" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1n5ikvn00ciqkkr4hnch5ws1k3gfj8z50j3alv6wdf5nayj9bxfq"))
+       (modules '((guix build utils)))
+       (snippet
+        '(begin (substitute* "Cargo.toml"
+                  ;; Patch xmlparser version
+                  (("0.13.5") "0.13.3"))))))
+    (arguments
+     `(#:skip-build? #t
+       #:cargo-inputs (("rust-xmlparser" ,rust-xmlparser-0.13))))))
+
+(define-public rust-roxmltree-0.14
+  (package
+    (inherit rust-roxmltree-0.18)
     (name "rust-roxmltree")
     (version "0.14.0")
     (source
