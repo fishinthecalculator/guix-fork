@@ -54532,6 +54532,20 @@ known as PEP 508.")
     (license (list license:asl2.0
                    license:expat))))
 
+(define-public rust-percent-encoding-2.1
+  (package
+    (inherit rust-percent-encoding-2)
+    (name "rust-percent-encoding")
+    (version "2.1.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (crate-uri "percent-encoding" version))
+        (file-name (string-append name "-" version ".tar.gz"))
+        (sha256
+         (base32
+          "0bp3zrsk3kr47fbpipyczidbbx4g54lzxdm77ni1i3qws10mdzfl"))))))
+
 (define-public rust-percent-encoding-1
   (package
     (inherit rust-percent-encoding-2)
