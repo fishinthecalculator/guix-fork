@@ -9113,6 +9113,28 @@ storage.")
 programs.")
     (license (list license:asl2.0 license:expat))))
 
+(define-public rust-blocking-1.5
+  (package
+    (inherit rust-blocking-1.6)
+    (name "rust-blocking")
+    (version "1.5.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "blocking" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "064i3d6b8ln34fgdw49nmx9m36bwi3r3nv8c9xhcrpf4ilz92dva"))))
+    (arguments
+     `(#:cargo-inputs (("rust-async-channel" ,rust-async-channel-2)
+                       ("rust-async-task" ,rust-async-task-4)
+                       ("rust-futures-io" ,rust-futures-io-0.3)
+                       ("rust-futures-lite" ,rust-futures-lite-2)
+                       ("rust-piper" ,rust-piper-0.2)
+                       ("rust-tracing" ,rust-tracing-0.1))
+       #:cargo-development-inputs
+       (("rust-futures-lite" ,rust-futures-lite-1))))))
+
 (define-public rust-blocking-1
   (package
     (inherit rust-blocking-1.6)
