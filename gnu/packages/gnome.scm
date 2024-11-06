@@ -11027,11 +11027,11 @@ compiled.")
     (arguments
      `(#:cargo-inputs (("rust-anyhow" ,rust-anyhow-1)
                        ("rust-gettext-rs" ,rust-gettext-rs-0.7)
-                       ;("rust-glib" ,rust-glib-0.18)
+                                        ;("rust-glib" ,rust-glib-0.18)
                        ("rust-gtk4" ,rust-gtk4-0.8)
                        ("rust-libadwaita" ,rust-libadwaita-0.6)
-                       ;("rust-libc" ,rust-libc-0.2)
-                       ;("rust-log" ,rust-log-0.4)
+                                        ;("rust-libc" ,rust-libc-0.2)
+                                        ;("rust-log" ,rust-log-0.4)
                        ("rust-serde" ,rust-serde-1)
                        ("rust-pretty-env-logger" ,rust-pretty-env-logger-0.5)
                        ("rust-serde-json" ,rust-serde-json-1)
@@ -11044,53 +11044,48 @@ compiled.")
                   (guix build utils))
        #:phases
        (modify-phases %standard-phases
-         ;; (add-before 'install 'install-extra
-           ;; (lambda* (#:key inputs outputs #:allow-other-keys)
-           ;;   (let* ((out (assoc-ref outputs "out"))
-           ;;          (source (assoc-ref inputs "source"))
-           ;;          (share (string-append out "/share"))
-           ;;          (hicolor (string-append share "/icons/hicolor")))
-           ;;     (mkdir-p hicolor)
-           ;;     (with-directory-excursion hicolor
-           ;;       (mkdir-p "scalable/apps")
-           ;;       (install-file
-           ;;        (string-append source "/data/icons/org.pipewire.Helvum.svg")
-           ;;        "scalable/apps")
-           ;;       (mkdir-p "symbolic/apps")
-           ;;       (install-file
-           ;;        (string-append
-           ;;         source "/data/icons/org.pipewire.Helvum-symbolic.svg")
-           ;;        "symbolic/apps"))
-           ;;     (with-directory-excursion share
-           ;;       (mkdir-p "applications")
-           ;;       (with-directory-excursion "applications"
-           ;;         (install-file
-           ;;          (string-append
-           ;;           source "/data/org.pipewire.Helvum.desktop.in") ".")
-           ;;         (substitute* "org.pipewire.Helvum.desktop.in"
-           ;;           (("@icon@") "org.pipewire.Helvum")
-           ;;           (("Exec=helvum")
-           ;;            (string-append "Exec="
-           ;;                           (string-append out "/bin/helvum"))))
-           ;;         (rename-file "org.pipewire.Helvum.desktop.in"
-           ;;                      "org.pipewire.Helvum.desktop"))
-           ;;       (mkdir-p "metainfo")
-           ;;       (with-directory-excursion "metainfo"
-           ;;         (install-file
-           ;;          (string-append
-           ;;           source
-           ;;           "/data/org.pipewire.Helvum.metainfo.xml.in") ".")
-           ;;         (substitute* "org.pipewire.Helvum.metainfo.xml.in"
-           ;;           (("@app-id@") "org.pipewire.Helvum"))
-           ;;         (rename-file "org.pipewire.Helvum.metainfo.xml.in"
-           ;;                      "org.pipewire.Helvum.metainfo.xml"))))))
-;; (add-after 'unpack 'skip-gtk-update-icon-cache
-;;            ;; Don't create 'icon-theme.cache'.
-;;            (lambda _
-;;              (substitute* "meson.build"
-;;                (("gtk_update_icon_cache: true")
-;;                 "gtk_update_icon_cache: false"))))
-         (add-after 'unpack 'generate-gdk-pixbuf-loaders-cache-file
+         (add-after 'unpack 'patch-in-files
+           (lambda _
+             (let ((bindir
+                    (string-append #$output "/bin"))
+                   (localedir
+                    (string-append "\"" #$output "share/locale\""))
+                   (pkgdatadir
+                    (string-append "\"" #$output "/share/authenticator\"")))
+
+               (substitute* "src/config.rs.in"
+                 (("@APP_ID@") "\"org.gnome.design.IconLibrary\"")
+                 (("@PKGDATADIR@") pkgdatadir)
+                 (("@PROFILE@") "\"\"")
+                 (("@VERSION@") (string-append "\"" #$version "\""))
+                 (("@GETTEXT_PACKAGE@") "\"authenticator\"")
+                 (("@LOCALEDIR@") localedir)
+                 (("@OBJECT_PATH@") "\"/com/belmoussaoui/Authenticator/SearchProvider\""))
+               (rename-file "src/config.rs.in" "src/config.rs")
+
+               (substitute* "data/org.gnome.design.IconLibrary.SearchProvider.service.in"
+                 (("@app-id@") "org.gnome.design.IconLibrary")
+                 (("@bindir@") bindir)
+                 (("@name@") "authenticator"))
+               (rename-file "data/org.gnome.design.IconLibrary.SearchProvider.service.in"
+                            "data/org.gnome.design.IconLibrary.SearchProvider.service")
+
+               (substitute* "data/org.gnome.design.IconLibrary.metainfo.xml.in.in"
+                 (("@app-id@") "org.gnome.design.IconLibrary")
+                 (("@gettext-package@") "authenticator"))
+               (rename-file "data/org.gnome.design.IconLibrary.metainfo.xml.in.in"
+                            "data/org.gnome.design.IconLibrary.metainfo.xml")
+
+               (substitute* "data/org.gnome.design.IconLibrary.desktop.in.in"
+                 (("@icon@") "org.gnome.design.IconLibrary"))
+               (rename-file "data/org.gnome.design.IconLibrary.desktop.in.in"
+                            "data/org.gnome.design.IconLibrary.desktop")
+
+               (substitute* "data/org.gnome.design.IconLibrary.gschema.xml.in"
+                 (("@app-id@") "org.gnome.design.IconLibrary")
+                 (("@gettext-package@") "authenticator"))
+               (rename-file "data/org.gnome.design.IconLibrary.gschema.xml.in"
+                            "data/org.gnome.design.IconLibrary.gschema.xml"))))         (add-after 'unpack 'generate-gdk-pixbuf-loaders-cache-file
            (assoc-ref glib-or-gtk:%standard-phases
                       'generate-gdk-pixbuf-loaders-cache-file))
          (add-after 'install 'glib-or-gtk-compile-schemas
@@ -11111,7 +11106,7 @@ compiled.")
            gtk
            gtksourceview
            libadwaita
-           pango))
+           pango-1.51))
     (home-page "https://gitlab.gnome.org/World/design/icon-library")
     (synopsis "Symbolic icons for your apps")
     (description
