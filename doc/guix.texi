@@ -45681,7 +45681,7 @@ version control, for example in the same repository where you'd track your
 Guix Home configuration.
 
 There are two supported dotfiles directory layouts, for now. The
-@code{'plain} layout, which is structured as follows:
+@code{plain-dotfiles-directory} layout is structured as follows:
 
 @example
 ~$ tree -a ./dotfiles/
@@ -45704,7 +45704,7 @@ dotfiles/
 This tree structure is installed as is to the
 home directory upon @command{guix home reconfigure}.
 
-The @code{'stow} layout, which must
+The @code{stow-dotfiles-directory} layout must
 follow the layout suggested by
 @uref{https://www.gnu.org/software/stow/, GNU Stow} presents an additional
 application specific directory layer, just like:
@@ -45741,15 +45741,18 @@ For an informal specification please refer to the Stow manual
 (@pxref{Top,,, stow, Introduction}). This tree structure is installed following
 GNU Stow's logic to the home directory upon @command{guix home reconfigure}.
 
-A suitable configuration with a @code{'plain} layout could be:
+A suitable configuration with a @code{plain-dotfiles-directory} layout could be:
 
 @lisp
 (home-environment
   ;; @dots{}
   (services
     (service home-dotfiles-service-type
-             (home-dotfiles-configuration
-               (directories '("./dotfiles"))))))
+             (home-dotfiles-environment
+               (directories
+                 (list
+                   (plain-dotfiles-directory
+                     (name "./dotfiles"))))))))
 @end lisp
 
 The expected home directory state would then be:
@@ -45783,8 +45786,65 @@ configurations.
 
 @c %start of fragment
 
+@deftp {Data Type} home-dotfiles-environment
+Available @code{home-dotfiles-environment} fields are:
+
+@table @asis
+@item @code{source-directory} (default: @code{(current-source-directory)}) (type: string)
+The path where dotfile directories are resolved.  By default dotfile
+directories are resolved relative the source location where
+@code{home-dotfiles-environment} appears.
+
+@item @code{directories} (default: @code{'()}) (type: list-of-dotfiles-directories)
+The list of dotfiles directories where @code{home-dotfiles-service-type}
+will look for application dotfiles.
+
+@item @code{excluded} (default: @code{'(".*~" ".*\\.swp" "\\.git/.*" "\\.gitignore")}) (type: list-of-strings)
+The list of file or directory patterns @code{home-dotfiles-service-type} will exclude
+while visiting each one of the @code{directories}.
+
+@end table
+
+@end deftp
+
+@deftp {Data Type} plain-dotfiles-directory
+Available @code{plain-dotfiles-directory} fields are:
+
+@table @asis
+@item @code{name} (type: string)
+The path of the dotfiles directory where @code{home-dotfiles-service-type}
+will look for application dotfiles.
+
+@end table
+
+@end deftp
+
+@deftp {Data Type} stow-dotfiles-directory
+Available @code{stow-dotfiles-directory} fields are:
+
+@table @asis
+@item @code{name} (type: string)
+The path of the dotfiles directory where @code{home-dotfiles-service-type}
+will look for application dotfiles.
+
+@item @code{packages} (type: maybe-list-of-strings)
+The names of a subset of the GNU Stow package layer directories.  When provided
+the @code{home-dotfiles-service-type} will only provision dotfiles from this
+subset of applications.
+
+@end table
+
+@end deftp
+
+@c %end of fragment
+
+@c %start of fragment
+
 @deftp {Data Type} home-dotfiles-configuration
-Available @code{home-dotfiles-configuration} fields are:
+The @code{home-dotfiles-configuration} is the legacy configuration record for the
+@code{home-dotfiles-service-type}, it is now deprecated in favor of
+@code{home-dotfiles-environment}, @code{stow-dotfiles-directory} and
+@code{plain-dotfiles-directory}.  Its fields are:
 
 @table @asis
 @item @code{source-directory} (default: @code{(current-source-directory)}) (type: string)
