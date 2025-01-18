@@ -43,6 +43,7 @@
   #:use-module ((guix scripts pack) #:prefix pack:)
   #:use-module (guix store)
   #:export (%test-rootless-podman
+            %test-oci-service-rootless-podman
             %test-oci-service-docker))
 
 
@@ -395,6 +396,526 @@ standard output device and then enters a new line.")
    (volumes
     (list (oci-volume-configuration (name "my-volume"))))
    (containers %oci-test-containers)))
+
+(define %oci-rootless-podman-os
+  (simple-operating-system
+   (service dhcp-client-service-type)
+   (service dbus-root-service-type)
+   (service polkit-service-type)
+   (service elogind-service-type)
+   (service iptables-service-type)
+   (service rootless-podman-service-type)
+   (extra-special-file "/shared.txt"
+                       (plain-file "shared.txt" "hello"))
+   (service oci-service-type
+            (oci-configuration
+             (runtime 'podman)
+             (verbose? #t)))
+   (simple-service 'oci-provisioning
+                   oci-service-type
+                   %oci-extension-test)))
+
+(define (run-rootless-podman-oci-service-test)
+  (define os
+    (marionette-operating-system
+     (operating-system-with-gc-roots
+      %oci-rootless-podman-os
+      (list))
+     #:imported-modules '((gnu services herd)
+                          (guix combinators))))
+
+  (define vm
+    (virtual-machine
+     (operating-system os)
+     (volatile? #f)
+     (memory-size 1024)
+     (disk-image-size (* 3000 (expt 2 20)))
+     (port-forwardings '())))
+
+  (define test
+    (with-imported-modules '((gnu build marionette))
+      #~(begin
+          (use-modules (srfi srfi-11) (srfi srfi-64)
+                       (gnu build marionette))
+
+          (define marionette
+            ;; Relax timeout to accommodate older systems and
+            ;; allow for pulling the image.
+            (make-marionette (list #$vm) #:timeout 60))
+          (define out-dir "/tmp")
+
+          (test-runner-current (system-test-runner #$output))
+          (test-begin "rootless-podman-oci-service")
+
+          (marionette-eval
+           '(begin
+              (use-modules (gnu services herd))
+              (wait-for-service 'user-processes))
+           marionette)
+
+          (test-assert "podman-volumes running"
+            (begin
+              (define (run-test)
+                (marionette-eval
+                 `(begin
+                    (use-modules (srfi srfi-1)
+                                 (ice-9 popen)
+                                 (ice-9 match)
+                                 (ice-9 rdelim))
+
+                    (define (wait-for-file file)
+                      ;; Wait until FILE shows up.
+                      (let loop ((i 60))
+                        (cond ((file-exists? file)
+                               #t)
+                              ((zero? i)
+                               (error "file didn't show up" file))
+                              (else
+                               (pk 'wait-for-file file)
+                               (sleep 1)
+                               (loop (- i 1))))))
+
+                    (define (read-lines file-or-port)
+                      (define (loop-lines port)
+                        (let loop ((lines '()))
+                          (match (read-line port)
+                            ((? eof-object?)
+                             (reverse lines))
+                            (line
+                             (loop (cons line lines))))))
+
+                      (if (port? file-or-port)
+                          (loop-lines file-or-port)
+                          (call-with-input-file file-or-port
+                            loop-lines)))
+
+                    (define slurp
+                      (lambda args
+                        (let* ((port (apply open-pipe* OPEN_READ
+                                            (list "sh" "-l" "-c"
+                                                  (string-join
+                                                   args
+                                                   " "))))
+                               (output (read-lines port))
+                               (status (close-pipe port)))
+                          output)))
+
+                    (match (primitive-fork)
+                      (0
+                       (dynamic-wind
+                         (const #f)
+                         (lambda ()
+                           (setgid (passwd:gid (getpwnam "cgroup")))
+                           (setuid (passwd:uid (getpw "oci-container")))
+
+                           (let ((response (slurp
+                                            "env" "&&" "id" "&&" "/run/current-system/profile/bin/podman"
+                                            "volume" "ls" "--format" "\"{{.Name}}\"")))
+                             (call-with-output-file (string-append ,out-dir "/response")
+                               (lambda (port)
+                                 (display (string-join response " ") port)))))
+                         (lambda ()
+                           (primitive-exit 127))))
+                      (pid
+                       (cdr (waitpid pid))))
+
+                    (wait-for-file (string-append ,out-dir "/response"))
+
+                    (stable-sort
+                     (slurp "cat" (string-append ,out-dir "/response"))
+                     string<=?))
+                 marionette))
+              ;; Allow services to come up on slower machines
+              (let loop ((attempts 0))
+                (if (= attempts 80)
+                    (error "Service didn't come up after more than 80 seconds")
+                    (if (equal? '("my-volume")
+                                (pk 'out (run-test)))
+                        #t
+                        (begin
+                          (sleep 1)
+                          (loop (+ 1 attempts))))))))
+
+          (test-assert "podman-networks running"
+            (begin
+              (define (run-test)
+                (marionette-eval
+                 `(begin
+                    (use-modules (srfi srfi-1)
+                                 (ice-9 popen)
+                                 (ice-9 match)
+                                 (ice-9 rdelim))
+
+                    (define (read-lines file-or-port)
+                      (define (loop-lines port)
+                        (let loop ((lines '()))
+                          (match (read-line port)
+                            ((? eof-object?)
+                             (reverse lines))
+                            (line
+                             (loop (cons line lines))))))
+
+                      (if (port? file-or-port)
+                          (loop-lines file-or-port)
+                          (call-with-input-file file-or-port
+                            loop-lines)))
+
+                    (define slurp
+                      (lambda args
+                        (let* ((port (apply open-pipe* OPEN_READ
+                                            (list "sh" "-l" "-c"
+                                                  (string-join
+                                                   args
+                                                   " "))))
+                               (output (read-lines port))
+                               (status (close-pipe port)))
+                          output)))
+
+                    (stable-sort
+                     (slurp
+                      "/run/current-system/profile/bin/podman"
+                      "network" "ls" "--format" "\"{{.Name}}\"")
+                     string<=?))
+
+                 marionette))
+              ;; Allow services to come up on slower machines
+              (let loop ((attempts 0))
+                (if (= attempts 80)
+                    (error "Service didn't come up after more than 80 seconds")
+                    (if (equal? '("bridge" "my-network")
+                                (pk 'out-networks (run-test)))
+                        #t
+                        (begin
+                          (sleep 1)
+                          (loop (+ 1 attempts))))))))
+
+          (test-assert "first container running"
+            (marionette-eval
+             '(begin
+                (use-modules (gnu services herd))
+                (wait-for-service 'first #:timeout 120)
+                #t)
+             marionette))
+
+          (test-assert "second container running"
+            (marionette-eval
+              '(begin
+                (use-modules (gnu services herd))
+                (wait-for-service 'second #:timeout 120
+                 #t))
+             marionette))
+
+          (test-assert "passing host environment variables"
+            (begin
+              (define (run-tests)
+                (marionette-eval
+                 `(begin
+                    (use-modules (srfi srfi-1)
+                                 (ice-9 popen)
+                                 (ice-9 match)
+                                 (ice-9 rdelim))
+
+                    (define (wait-for-file file)
+                      ;; Wait until FILE shows up.
+                      (let loop ((i 60))
+                        (cond ((file-exists? file)
+                               #t)
+                              ((zero? i)
+                               (error "file didn't show up" file))
+                              (else
+                               (pk 'wait-for-file file)
+                               (sleep 1)
+                               (loop (- i 1))))))
+
+                    (define (read-lines file-or-port)
+                      (define (loop-lines port)
+                        (let loop ((lines '()))
+                          (match (read-line port)
+                            ((? eof-object?)
+                             (reverse lines))
+                            (line
+                             (loop (cons line lines))))))
+
+                      (if (port? file-or-port)
+                          (loop-lines file-or-port)
+                          (call-with-input-file file-or-port
+                            loop-lines)))
+
+                    (define slurp
+                      (lambda args
+                        (let* ((port (apply open-pipe* OPEN_READ
+                                            (list "sh" "-l" "-c"
+                                                  (string-join
+                                                   args
+                                                   " "))))
+                               (output (read-lines port))
+                               (status (close-pipe port)))
+                          output)))
+
+                    (match (primitive-fork)
+                      (0
+                       (dynamic-wind
+                         (const #f)
+                         (lambda ()
+                           (setgid (passwd:gid (getpwnam "cgroup")))
+                           (setuid (passwd:uid (getpw "oci-container")))
+
+                           (let ((response (slurp
+                                            "/run/current-system/profile/bin/podman"
+                                            "exec" "first"
+                                            "/bin/guile" "-c" "(display (getenv \"VARIABLE\"))")))
+                             (call-with-output-file (string-append ,out-dir "/response")
+                               (lambda (port)
+                                 (display (string-join response " ") port)))))
+                         (lambda ()
+                           (primitive-exit 127))))
+                      (pid
+                       (cdr (waitpid pid))))
+
+                    (wait-for-file (string-append ,out-dir "/response"))
+                    (slurp "cat" (string-append ,out-dir "/response")))
+                 marionette))
+              ;; Allow image to be loaded on slower machines
+              (let loop ((attempts 0))
+                (if (= attempts 180)
+                    (error "Service didn't come up after more than 180 seconds")
+                    (if (equal? "value"
+                                (run-test))
+                        #t
+                        (begin
+                          (sleep 1)
+                          (loop (+ 1 attempts))))))))
+
+          (test-equal "mounting host files"
+            "hello"
+            (marionette-eval
+             `(begin
+                (use-modules (srfi srfi-1)
+                             (ice-9 popen)
+                             (ice-9 match)
+                             (ice-9 rdelim))
+
+                (define (wait-for-file file)
+                  ;; Wait until FILE shows up.
+                  (let loop ((i 60))
+                    (cond ((file-exists? file)
+                           #t)
+                          ((zero? i)
+                           (error "file didn't show up" file))
+                          (else
+                           (pk 'wait-for-file file)
+                           (sleep 1)
+                           (loop (- i 1))))))
+
+                (define (read-lines file-or-port)
+                  (define (loop-lines port)
+                    (let loop ((lines '()))
+                      (match (read-line port)
+                        ((? eof-object?)
+                         (reverse lines))
+                        (line
+                         (loop (cons line lines))))))
+
+                  (if (port? file-or-port)
+                      (loop-lines file-or-port)
+                      (call-with-input-file file-or-port
+                        loop-lines)))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ
+                                        (list "sh" "-l" "-c"
+                                              (string-join
+                                               args
+                                               " "))))
+                           (output (read-lines port))
+                           (status (close-pipe port)))
+                      output)))
+
+                (match (primitive-fork)
+                  (0
+                   (dynamic-wind
+                     (const #f)
+                     (lambda ()
+                       (setgid (passwd:gid (getpwnam "cgroup")))
+                       (setuid (passwd:uid (getpw "oci-container")))
+
+                       (let ((response (slurp
+                                        "/run/current-system/profile/bin/podman"
+                                        "exec" "second"
+                                        "/bin/guile" "-c" "(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(display (call-with-input-file \"/shared.txt\" read-line)))")))
+                         (call-with-output-file (string-append ,out-dir "/response")
+                           (lambda (port)
+                             (display (string-join response " ") port)))))
+                     (lambda ()
+                       (primitive-exit 127))))
+                  (pid
+                   (cdr (waitpid pid))))
+
+                (wait-for-file (string-append ,out-dir "/response"))
+                (slurp "cat" (string-append ,out-dir "/response")))
+             marionette))
+
+          (test-equal "write to volumes"
+            "world"
+            (marionette-eval
+             `(begin
+                (use-modules (srfi srfi-1)
+                             (ice-9 popen)
+                             (ice-9 match)
+                             (ice-9 rdelim))
+
+                (define (wait-for-file file)
+                  ;; Wait until FILE shows up.
+                  (let loop ((i 60))
+                    (cond ((file-exists? file)
+                           #t)
+                          ((zero? i)
+                           (error "file didn't show up" file))
+                          (else
+                           (pk 'wait-for-file file)
+                           (sleep 1)
+                           (loop (- i 1))))))
+
+                (define (read-lines file-or-port)
+                  (define (loop-lines port)
+                    (let loop ((lines '()))
+                      (match (read-line port)
+                        ((? eof-object?)
+                         (reverse lines))
+                        (line
+                         (loop (cons line lines))))))
+
+                  (if (port? file-or-port)
+                      (loop-lines file-or-port)
+                      (call-with-input-file file-or-port
+                        loop-lines)))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ
+                                        (list "sh" "-l" "-c"
+                                              (string-join
+                                               args
+                                               " "))))
+                           (output (read-lines port))
+                           (status (close-pipe port)))
+                      output)))
+
+                (match (primitive-fork)
+                  (0
+                   (dynamic-wind
+                     (const #f)
+                     (lambda ()
+                       (setgid (passwd:gid (getpwnam "cgroup")))
+                       (setuid (passwd:uid (getpw "oci-container")))
+
+                       (slurp
+                        "/run/current-system/profile/bin/rootless-podman"
+                        "exec" "first"
+                        "/bin/guile" "-c" "(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(call-with-output-file \"/my-volume/out.txt\" (lambda (p) (display \"world\" p))))")
+
+                       (let ((response (slurp
+                                        "/run/current-system/profile/bin/rootless-podman"
+                                        "exec" "second"
+                                        "/bin/guile" "-c" "(begin (use-modules (ice-9 popen) (ice-9 rdelim))
+(display (call-with-input-file \"/my-volume/out.txt\" read-line)))")))
+                         (call-with-output-file (string-append ,out-dir "/response")
+                           (lambda (port)
+                             (display (string-join response " ") port)))))
+                     (lambda ()
+                       (primitive-exit 127))))
+                  (pid
+                   (cdr (waitpid pid))))
+
+                (wait-for-file (string-append ,out-dir "/response"))
+                (slurp "cat" (string-append ,out-dir "/response")))
+             marionette))
+
+          (test-equal "can read ports over network"
+            "out of office"
+            (marionette-eval
+             `(begin
+                (use-modules (srfi srfi-1)
+                             (ice-9 popen)
+                             (ice-9 match)
+                             (ice-9 rdelim))
+
+                (define (wait-for-file file)
+                  ;; Wait until FILE shows up.
+                  (let loop ((i 60))
+                    (cond ((file-exists? file)
+                           #t)
+                          ((zero? i)
+                           (error "file didn't show up" file))
+                          (else
+                           (pk 'wait-for-file file)
+                           (sleep 1)
+                           (loop (- i 1))))))
+
+                (define (read-lines file-or-port)
+                  (define (loop-lines port)
+                    (let loop ((lines '()))
+                      (match (read-line port)
+                        ((? eof-object?)
+                         (reverse lines))
+                        (line
+                         (loop (cons line lines))))))
+
+                  (if (port? file-or-port)
+                      (loop-lines file-or-port)
+                      (call-with-input-file file-or-port
+                        loop-lines)))
+
+                (define slurp
+                  (lambda args
+                    (let* ((port (apply open-pipe* OPEN_READ
+                                        (list "sh" "-l" "-c"
+                                              (string-join
+                                               args
+                                               " "))))
+                           (output (read-lines port))
+                           (status (close-pipe port)))
+                      output)))
+
+                (match (primitive-fork)
+                  (0
+                   (dynamic-wind
+                     (const #f)
+                     (lambda ()
+                       (setgid (passwd:gid (getpwnam "cgroup")))
+                       (setuid (passwd:uid (getpw "oci-container")))
+
+                       (let ((response (slurp
+                                        "/run/current-system/profile/bin/rootless-podman"
+                                        "exec" "second"
+                                        "/bin/guile" "-c" "(begin (use-modules (web client))
+(define-values (response out)
+  (http-get \"http://first:8080\"))
+(display out))")))
+                         (call-with-output-file (string-append ,out-dir "/response")
+                           (lambda (port)
+                             (display (string-join response " ") port)))))
+                     (lambda ()
+                       (primitive-exit 127))))
+                  (pid
+                   (cdr (waitpid pid))))
+
+                (wait-for-file (string-append ,out-dir "/response"))
+                (slurp "cat" (string-append ,out-dir "/response")))
+             marionette))
+
+          (test-end))))
+
+  (gexp->derivation "rootless-podman-oci-service-test" test))
+
+(define %test-oci-service-rootless-podman
+  (system-test
+   (name "oci-service-rootless-podman")
+   (description "Test Rootless-Podman backed OCI provisioning service.")
+   (value (run-rootless-podman-oci-service-test))))
 
 (define %oci-docker-os
   (simple-operating-system

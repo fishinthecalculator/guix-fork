@@ -1270,7 +1270,9 @@ operating-system, gexp or file-like records but ~a was found")
   (list (user-account
          (name user)
          (comment "OCI services account")
-         (group (oci-runtime-group runtime maybe-group))
+         (group "users")
+         (supplementary-groups
+          (list (oci-runtime-group runtime maybe-group)))
          (system? (eq? 'docker runtime))
          (home-directory (if (eq? 'podman runtime)
                              (string-append "/home/" user)
