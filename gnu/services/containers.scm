@@ -75,6 +75,8 @@
             oci-image-system
             oci-image-grafts?
 
+            lower-oci-image-state
+
             oci-container-configuration
             oci-container-configuration?
             oci-container-configuration-fields
